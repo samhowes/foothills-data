@@ -10,11 +10,17 @@ namespace ApiCrawlerTests
 {
     public class EntityGeneratorTests
     {
+        private readonly EntityGenerator _generator;
+
+        public EntityGeneratorTests()
+        {
+            _generator = new EntityGenerator(new Editor());
+        }
+        
         [Fact]
         public async Task GenerateEntity_Works()
         {
-            var generator = new EntityGenerator(new Editor());
-            var text = await generator.GenerateEntityAsync("foo", new ExampleObject()
+            var text = await _generator.GenerateEntityAsync("foo", new ExampleObject()
             {
                 Type = "bar",
                 Attributes = new JObject(
@@ -28,7 +34,28 @@ namespace ApiCrawlerTests
         public string MultiWord { get; set; }
     }
 }");
+        }
 
+        [Fact]
+        public async Task PropertyName_SameAsEntity_IsReplaced()
+        {
+            var text = await _generator.GenerateEntityAsync("foo", new ExampleObject()
+            {
+                Type = "Bar",
+                Attributes = new JObject(
+                    new JProperty("bar", "string"))
+            });
+
+            text.Should().Be(@"using Newtonsoft.Json;
+
+namespace PlanningCenter.Api.foo
+{
+    public class Bar
+    {
+        [JsonProperty(""bar"")]
+        public string value { get; set; }
+    }
+}");
         }
     }
 }
