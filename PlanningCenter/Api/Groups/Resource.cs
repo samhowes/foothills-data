@@ -7,5 +7,7 @@ namespace PlanningCenter.Api.Groups
         public string Name { get; set; }
         public string Type { get; set; }
         public string Visibility { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
     }
 }

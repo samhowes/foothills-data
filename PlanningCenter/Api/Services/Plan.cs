@@ -27,5 +27,19 @@ namespace PlanningCenter.Api.Services
         public string ShortDates { get; set; }
         public string PlanningCenterUrl { get; set; }
         public string RemindersDisabled { get; set; }
+        public string ServiceTypeId { get; set; }
+        public ServiceType ServiceType { get; set; }
+        public string NextPlanId { get; set; }
+        public Plan NextPlan { get; set; }
+        public string PreviousPlanId { get; set; }
+        public Plan PreviousPlan { get; set; }
+        public string SeriesId { get; set; }
+        public Series Series { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
+        public string UpdatedById { get; set; }
+        public Person UpdatedBy { get; set; }
+        public string LinkedPublishingEpisodeId { get; set; }
+        public LinkedPublishingEpisode LinkedPublishingEpisode { get; set; }
     }
 }

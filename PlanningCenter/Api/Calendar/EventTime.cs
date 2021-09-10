@@ -7,5 +7,7 @@ namespace PlanningCenter.Api.Calendar
         public string Name { get; set; }
         public string VisibleOnKiosks { get; set; }
         public string VisibleOnWidgetAndIcal { get; set; }
+        public string EventId { get; set; }
+        public Event Event { get; set; }
     }
 }

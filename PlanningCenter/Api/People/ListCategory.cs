@@ -6,5 +6,6 @@ namespace PlanningCenter.Api.People
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public string OrganizationId { get; set; }
+        public Organization Organization { get; set; }
     }
 }

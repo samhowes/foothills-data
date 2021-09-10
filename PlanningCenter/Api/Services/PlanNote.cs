@@ -6,5 +6,7 @@ namespace PlanningCenter.Api.Services
         public string UpdatedAt { get; set; }
         public string CategoryName { get; set; }
         public string Content { get; set; }
+        public string PlanNoteCategoryId { get; set; }
+        public PlanNoteCategory PlanNoteCategory { get; set; }
     }
 }

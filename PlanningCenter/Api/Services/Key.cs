@@ -10,5 +10,7 @@ namespace PlanningCenter.Api.Services
         public string StartingKey { get; set; }
         public string StartingMinor { get; set; }
         public string EndingMinor { get; set; }
+        public string ArrangementId { get; set; }
+        public Arrangement Arrangement { get; set; }
     }
 }

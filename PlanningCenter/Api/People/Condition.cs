@@ -10,5 +10,7 @@ namespace PlanningCenter.Api.People
         public string Description { get; set; }
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
     }
 }

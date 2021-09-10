@@ -16,5 +16,13 @@ namespace PlanningCenter.Api.Groups
         public string Repeating { get; set; }
         public string StartsAt { get; set; }
         public string VirtualLocationUrl { get; set; }
+        public string AttendanceSubmitterId { get; set; }
+        public Person AttendanceSubmitter { get; set; }
+        public string GroupId { get; set; }
+        public Group Group { get; set; }
+        public string LocationId { get; set; }
+        public Location Location { get; set; }
+        public string RepeatingEventId { get; set; }
+        public RepeatingEvent RepeatingEvent { get; set; }
     }
 }

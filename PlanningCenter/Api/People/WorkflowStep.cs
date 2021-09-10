@@ -14,5 +14,8 @@ namespace PlanningCenter.Api.People
         public string MyReadyCardCount { get; set; }
         public string TotalReadyCardCount { get; set; }
         public string DefaultAssigneeId { get; set; }
+        public Person DefaultAssignee { get; set; }
+        public string WorkflowId { get; set; }
+        public Workflow Workflow { get; set; }
     }
 }

@@ -11,5 +11,9 @@ namespace PlanningCenter.Api.Groups
         public string LastName { get; set; }
         public string PhoneNumber { get; set; }
         public string Role { get; set; }
+        public string GroupId { get; set; }
+        public Group Group { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
     }
 }

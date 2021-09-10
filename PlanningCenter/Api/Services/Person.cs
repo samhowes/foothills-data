@@ -42,5 +42,11 @@ namespace PlanningCenter.Api.Services
         public string CanEditAllPeople { get; set; }
         public string CanViewAllPeople { get; set; }
         public string Onboardings { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
+        public string UpdatedById { get; set; }
+        public Person UpdatedBy { get; set; }
+        public string CurrentFolderId { get; set; }
+        public Folder CurrentFolder { get; set; }
     }
 }

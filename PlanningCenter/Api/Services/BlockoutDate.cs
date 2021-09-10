@@ -10,5 +10,9 @@ namespace PlanningCenter.Api.Services
         public string EndsAt { get; set; }
         public string EndsAtUtc { get; set; }
         public string StartsAtUtc { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string BlockoutId { get; set; }
+        public Blockout Blockout { get; set; }
     }
 }

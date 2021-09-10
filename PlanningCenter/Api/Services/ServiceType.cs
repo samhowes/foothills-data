@@ -16,5 +16,7 @@ namespace PlanningCenter.Api.Services
         public string LastPlanFrom { get; set; }
         public string Permissions { get; set; }
         public string StandardItemTypes { get; set; }
+        public string ParentId { get; set; }
+        public Folder Parent { get; set; }
     }
 }

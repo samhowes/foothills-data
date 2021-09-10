@@ -7,5 +7,9 @@ namespace PlanningCenter.Api.People
         public string FileSize { get; set; }
         public string FileContentType { get; set; }
         public string FileName { get; set; }
+        public string FieldDefinitionId { get; set; }
+        public FieldDefinition FieldDefinition { get; set; }
+        public string CustomizableId { get; set; }
+        public Customizable Customizable { get; set; }
     }
 }

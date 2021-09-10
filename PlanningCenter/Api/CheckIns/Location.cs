@@ -21,5 +21,7 @@ namespace PlanningCenter.Api.CheckIns
         public string Position { get; set; }
         public string UpdatedAt { get; set; }
         public string CreatedAt { get; set; }
+        public string ParentId { get; set; }
+        public Parent Parent { get; set; }
     }
 }

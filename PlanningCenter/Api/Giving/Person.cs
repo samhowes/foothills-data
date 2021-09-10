@@ -9,5 +9,7 @@ namespace PlanningCenter.Api.Giving
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string DonorNumber { get; set; }
+        public string PrimaryCampusId { get; set; }
+        public Campus PrimaryCampus { get; set; }
     }
 }

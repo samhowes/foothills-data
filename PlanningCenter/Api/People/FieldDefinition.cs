@@ -9,5 +9,6 @@ namespace PlanningCenter.Api.People
         public string Config { get; set; }
         public string DeletedAt { get; set; }
         public string TabId { get; set; }
+        public Tab Tab { get; set; }
     }
 }

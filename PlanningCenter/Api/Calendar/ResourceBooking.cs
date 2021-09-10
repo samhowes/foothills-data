@@ -7,5 +7,11 @@ namespace PlanningCenter.Api.Calendar
         public string StartsAt { get; set; }
         public string UpdatedAt { get; set; }
         public string Quantity { get; set; }
+        public string EventId { get; set; }
+        public Event Event { get; set; }
+        public string EventInstanceId { get; set; }
+        public EventInstance EventInstance { get; set; }
+        public string ResourceId { get; set; }
+        public Resource Resource { get; set; }
     }
 }

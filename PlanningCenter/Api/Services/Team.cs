@@ -16,5 +16,9 @@ namespace PlanningCenter.Api.Services
         public string LastPlanFrom { get; set; }
         public string StageColor { get; set; }
         public string StageVariant { get; set; }
+        public string ServiceTypeId { get; set; }
+        public ServiceType ServiceType { get; set; }
+        public string DefaultRespondsToId { get; set; }
+        public Person DefaultRespondsTo { get; set; }
     }
 }

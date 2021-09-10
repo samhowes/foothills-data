@@ -9,5 +9,6 @@ namespace PlanningCenter.Api.People
         public string UpdatedAt { get; set; }
         public string Avatar { get; set; }
         public string PrimaryContactId { get; set; }
+        public Person PrimaryContact { get; set; }
     }
 }

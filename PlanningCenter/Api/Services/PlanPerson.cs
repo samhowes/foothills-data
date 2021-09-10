@@ -19,5 +19,17 @@ namespace PlanningCenter.Api.Services
         public string NotificationSentAt { get; set; }
         public string PrepareNotification { get; set; }
         public string CanAcceptPartial { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string PlanId { get; set; }
+        public Plan Plan { get; set; }
+        public string ScheduledById { get; set; }
+        public Person ScheduledBy { get; set; }
+        public string ServiceTypeId { get; set; }
+        public ServiceType ServiceType { get; set; }
+        public string TeamId { get; set; }
+        public Team Team { get; set; }
+        public string RespondsToId { get; set; }
+        public Person RespondsTo { get; set; }
     }
 }

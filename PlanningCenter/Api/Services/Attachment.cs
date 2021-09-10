@@ -24,5 +24,13 @@ namespace PlanningCenter.Api.Services
         public string Transposable { get; set; }
         public string Streamable { get; set; }
         public string HasPreview { get; set; }
+        public string AttachableId { get; set; }
+        public Plan Attachable { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
+        public string UpdatedById { get; set; }
+        public Person UpdatedBy { get; set; }
+        public string AdministratorId { get; set; }
+        public Person Administrator { get; set; }
     }
 }

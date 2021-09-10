@@ -135,10 +135,10 @@ namespace ApiCrawler
             apiSections.Count.Should().Be(8);
 
             var editor = new Editor();
-            var entityGenerator = new EntityGenerator(editor);
             
             foreach (var apiSection in apiSections.Skip(1))
             {
+                var entityGenerator = new EntityGenerator(editor);
                 Section(apiSection.Name);
                 var sectionName = apiSection.Name.Pascalize().Replace("-", "");
                 var sectionFolder = Path.Combine(apiProjectDirectory, sectionName);
@@ -175,9 +175,9 @@ namespace ApiCrawler
         public string Type { get; set; }
         public string Id { get; set; }
         public JObject Attributes { get; set; }
-        public JObject Relationships { get; set; }
+        public JObject? Relationships { get; set; }
     }
-    
+
     public class Editor
     {
         private readonly AdhocWorkspace _workspace;

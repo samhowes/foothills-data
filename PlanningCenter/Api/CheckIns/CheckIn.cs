@@ -13,5 +13,9 @@ namespace PlanningCenter.Api.CheckIns
         public string CheckedOutAt { get; set; }
         public string EmergencyContactName { get; set; }
         public string EmergencyContactPhoneNumber { get; set; }
+        public string EventPeriodId { get; set; }
+        public EventPeriod EventPeriod { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
     }
 }

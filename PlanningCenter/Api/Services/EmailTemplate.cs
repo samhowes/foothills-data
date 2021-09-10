@@ -7,5 +7,7 @@ namespace PlanningCenter.Api.Services
         public string UpdatedAt { get; set; }
         public string HtmlBody { get; set; }
         public string Subject { get; set; }
+        public string TemplateOwnerId { get; set; }
+        public Organization TemplateOwner { get; set; }
     }
 }

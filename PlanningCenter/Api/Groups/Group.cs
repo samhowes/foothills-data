@@ -16,5 +16,9 @@ namespace PlanningCenter.Api.Groups
         public string PublicChurchCenterWebUrl { get; set; }
         public string Schedule { get; set; }
         public string VirtualLocationUrl { get; set; }
+        public string GroupTypeId { get; set; }
+        public GroupType GroupType { get; set; }
+        public string LocationId { get; set; }
+        public Location Location { get; set; }
     }
 }

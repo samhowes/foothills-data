@@ -9,5 +9,9 @@ namespace PlanningCenter.Api.Calendar
         public string Diagram { get; set; }
         public string DiagramUrl { get; set; }
         public string DiagramThumbnailUrl { get; set; }
+        public string RoomSetupId { get; set; }
+        public RoomSetup Parent { get; set; }
+        public string ContainingResourceId { get; set; }
+        public Resource ContainingResource { get; set; }
     }
 }

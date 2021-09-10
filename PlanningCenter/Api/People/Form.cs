@@ -13,5 +13,9 @@ namespace PlanningCenter.Api.People
         public string PublicUrl { get; set; }
         public string RecentlyViewed { get; set; }
         public string Archived { get; set; }
+        public string CampusId { get; set; }
+        public Campus Campus { get; set; }
+        public string FormCategoryId { get; set; }
+        public FormCategory FormCategory { get; set; }
     }
 }

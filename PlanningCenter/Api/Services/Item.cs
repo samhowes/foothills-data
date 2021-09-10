@@ -15,5 +15,17 @@ namespace PlanningCenter.Api.Services
         public string CustomArrangementSequence { get; set; }
         public string CustomArrangementSequenceShort { get; set; }
         public string CustomArrangementSequenceFull { get; set; }
+        public string PlanId { get; set; }
+        public Plan Plan { get; set; }
+        public string SongId { get; set; }
+        public Song Song { get; set; }
+        public string ArrangementId { get; set; }
+        public Arrangement Arrangement { get; set; }
+        public string KeyId { get; set; }
+        public Key Key { get; set; }
+        public string SelectedLayoutId { get; set; }
+        public Layout SelectedLayout { get; set; }
+        public string SelectedBackgroundId { get; set; }
+        public Attachment SelectedBackground { get; set; }
     }
 }

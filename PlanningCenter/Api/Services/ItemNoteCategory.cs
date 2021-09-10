@@ -8,5 +8,7 @@ namespace PlanningCenter.Api.Services
         public string Sequence { get; set; }
         public string UpdatedAt { get; set; }
         public string FrequentlyUsed { get; set; }
+        public string ServiceTypeId { get; set; }
+        public ServiceType ServiceType { get; set; }
     }
 }

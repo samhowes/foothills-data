@@ -13,5 +13,7 @@ namespace PlanningCenter.Api.People
         public string Type { get; set; }
         public string ContentIsHtml { get; set; }
         public string CreatedAt { get; set; }
+        public string WorkflowCardId { get; set; }
+        public WorkflowCard WorkflowCard { get; set; }
     }
 }

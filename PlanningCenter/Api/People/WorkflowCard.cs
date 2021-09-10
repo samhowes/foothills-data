@@ -13,5 +13,13 @@ namespace PlanningCenter.Api.People
         public string FlaggedForNotificationAt { get; set; }
         public string RemovedAt { get; set; }
         public string MovedToStepAt { get; set; }
+        public string AssigneeId { get; set; }
+        public Assignee Assignee { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string WorkflowId { get; set; }
+        public Workflow Workflow { get; set; }
+        public string CurrentStepId { get; set; }
+        public WorkflowStep CurrentStep { get; set; }
     }
 }

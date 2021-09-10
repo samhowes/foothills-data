@@ -9,5 +9,9 @@ namespace PlanningCenter.Api.Giving
         public string JointGiverAmountCents { get; set; }
         public string DonatedTotalCents { get; set; }
         public string JointGiverDonatedTotalCents { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string PledgeCampaignId { get; set; }
+        public PledgeCampaign PledgeCampaign { get; set; }
     }
 }

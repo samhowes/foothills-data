@@ -19,5 +19,15 @@ namespace PlanningCenter.Api.Giving
         public string FeeCurrency { get; set; }
         public string Refunded { get; set; }
         public string Refundable { get; set; }
+        public string BatchId { get; set; }
+        public Batch Batch { get; set; }
+        public string CampusId { get; set; }
+        public Campus Campus { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string PaymentSourceId { get; set; }
+        public PaymentSource PaymentSource { get; set; }
+        public string RecurringDonationId { get; set; }
+        public RecurringDonation RecurringDonation { get; set; }
     }
 }

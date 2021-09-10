@@ -9,5 +9,7 @@ namespace PlanningCenter.Api.Calendar
         public string Name { get; set; }
         public string UpdatedAt { get; set; }
         public string Url { get; set; }
+        public string EventId { get; set; }
+        public Event Event { get; set; }
     }
 }

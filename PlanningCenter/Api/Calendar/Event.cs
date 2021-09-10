@@ -12,5 +12,7 @@ namespace PlanningCenter.Api.Calendar
         public string Summary { get; set; }
         public string UpdatedAt { get; set; }
         public string VisibleInChurchCenter { get; set; }
+        public string OwnerId { get; set; }
+        public Person Owner { get; set; }
     }
 }

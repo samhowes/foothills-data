@@ -4,5 +4,7 @@ namespace PlanningCenter.Api.People
     {
         public string Note { get; set; }
         public string CreatedAt { get; set; }
+        public string NoteCategoryId { get; set; }
+        public NoteCategory NoteCategory { get; set; }
     }
 }

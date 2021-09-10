@@ -10,5 +10,7 @@ namespace PlanningCenter.Api.Webhooks
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public string Timing { get; set; }
+        public string EventId { get; set; }
+        public Event Event { get; set; }
     }
 }

@@ -17,5 +17,9 @@ namespace PlanningCenter.Api.Services
         public string StartsAt { get; set; }
         public string EndsAt { get; set; }
         public string Share { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string OrganizationId { get; set; }
+        public Organization Organization { get; set; }
     }
 }

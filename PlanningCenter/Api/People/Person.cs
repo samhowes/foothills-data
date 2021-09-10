@@ -30,5 +30,7 @@ namespace PlanningCenter.Api.People
         public string CanCreateForms { get; set; }
         public string SchoolType { get; set; }
         public string RemoteId { get; set; }
+        public string PrimaryCampusId { get; set; }
+        public PrimaryCampus PrimaryCampus { get; set; }
     }
 }

@@ -4,5 +4,9 @@ namespace PlanningCenter.Api.People
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
+        public string ListId { get; set; }
+        public List List { get; set; }
     }
 }

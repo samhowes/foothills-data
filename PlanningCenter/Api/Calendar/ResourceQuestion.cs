@@ -11,5 +11,7 @@ namespace PlanningCenter.Api.Calendar
         public string Optional { get; set; }
         public string Position { get; set; }
         public string Question { get; set; }
+        public string ResourceId { get; set; }
+        public Resource Resource { get; set; }
     }
 }

@@ -9,5 +9,7 @@ namespace PlanningCenter.Api.Giving
         public string TotalCents { get; set; }
         public string TotalCurrency { get; set; }
         public string Status { get; set; }
+        public string BatchGroupId { get; set; }
+        public BatchGroup BatchGroup { get; set; }
     }
 }

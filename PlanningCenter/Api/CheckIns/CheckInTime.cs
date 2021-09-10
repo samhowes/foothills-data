@@ -6,5 +6,11 @@ namespace PlanningCenter.Api.CheckIns
         public string HasValidated { get; set; }
         public string Errors { get; set; }
         public string ServicesIntegrated { get; set; }
+        public string EventTimeId { get; set; }
+        public EventTime EventTime { get; set; }
+        public string LocationId { get; set; }
+        public Location Location { get; set; }
+        public string CheckInId { get; set; }
+        public CheckIn CheckIn { get; set; }
     }
 }

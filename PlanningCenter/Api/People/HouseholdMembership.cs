@@ -4,5 +4,7 @@ namespace PlanningCenter.Api.People
     {
         public string PersonName { get; set; }
         public string Pending { get; set; }
+        public string PersonId { get; set; }
+        public Person Person { get; set; }
     }
 }

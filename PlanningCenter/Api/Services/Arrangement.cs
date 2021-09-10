@@ -31,5 +31,11 @@ namespace PlanningCenter.Api.Services
         public string Lyrics { get; set; }
         public string Mtid { get; set; }
         public string RehearsalMixId { get; set; }
+        public string UpdatedById { get; set; }
+        public Person UpdatedBy { get; set; }
+        public string CreatedById { get; set; }
+        public Person CreatedBy { get; set; }
+        public string SongId { get; set; }
+        public Song Song { get; set; }
     }
 }

@@ -13,5 +13,7 @@ namespace PlanningCenter.Api.Giving
         public string ShowGoalInChurchCenter { get; set; }
         public string ReceivedTotalFromPledgesCents { get; set; }
         public string ReceivedTotalOutsideOfPledgesCents { get; set; }
+        public string FundId { get; set; }
+        public Fund Fund { get; set; }
     }
 }

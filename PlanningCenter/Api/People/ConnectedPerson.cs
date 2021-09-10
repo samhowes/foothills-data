@@ -10,5 +10,6 @@ namespace PlanningCenter.Api.People
         public string Gender { get; set; }
         public string OrganizationName { get; set; }
         public string OrganizationId { get; set; }
+        public Organization Organization { get; set; }
     }
 }

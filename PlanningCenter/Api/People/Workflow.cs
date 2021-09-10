@@ -12,6 +12,8 @@ namespace PlanningCenter.Api.People
         public string UpdatedAt { get; set; }
         public string DeletedAt { get; set; }
         public string CampusId { get; set; }
+        public Campus Campus { get; set; }
         public string WorkflowCategoryId { get; set; }
+        public WorkflowCategory WorkflowCategory { get; set; }
     }
 }
