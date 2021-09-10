@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Playwright;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -152,12 +153,16 @@ namespace ApiCrawler
                     var exampleJson = await docs.GetExampleObjectJson(entity);
                     var example = JsonConvert.DeserializeObject<ExampleObject>(exampleJson);
                     Info(example!.Type);
-                    
-                    var filename = example.Type + ".cs";
-                    var filePath = Path.Combine(sectionFolder, filename);
-                    var text = await entityGenerator.GenerateEntityAsync(sectionName, example);
-                    await File.WriteAllTextAsync(filePath, text);
+
+                    entityGenerator.RegisterEntity(example);
                 }
+
+                await entityGenerator.GenerateEntitiesAsync(sectionName, async (entityName, text) =>
+                {
+                    var filename = entityName + ".cs";
+                    var filePath = Path.Combine(sectionFolder, filename);
+                    await File.WriteAllTextAsync(filePath, text);
+                });
             }
 
             return 0;
