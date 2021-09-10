@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Message
+    public class Message : EntityBase
     {
         public string Kind { get; set; }
         public string ToAddresses { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Item
+    public class Item : EntityBase
     {
         public string Title { get; set; }
         public string Sequence { get; set; }

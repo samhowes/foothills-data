@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class MaritalStatus
+    public class MaritalStatus : EntityBase
     {
         public string Value { get; set; }
     }

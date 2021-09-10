@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class AttendanceType
+    public class AttendanceType : EntityBase
     {
         public string Name { get; set; }
         public string Color { get; set; }

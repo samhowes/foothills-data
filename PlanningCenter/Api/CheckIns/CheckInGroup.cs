@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class CheckInGroup
+    public class CheckInGroup : EntityBase
     {
         public string NameLabelsCount { get; set; }
         public string SecurityLabelsCount { get; set; }

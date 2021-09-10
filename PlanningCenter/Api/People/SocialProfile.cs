@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class SocialProfile
+    public class SocialProfile : EntityBase
     {
         public string Site { get; set; }
         public string Url { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Blockout
+    public class Blockout : EntityBase
     {
         public string Description { get; set; }
         public string GroupIdentifier { get; set; }

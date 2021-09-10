@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Attachment
+    public class Attachment : EntityBase
     {
         public string ContentType { get; set; }
         public string CreatedAt { get; set; }

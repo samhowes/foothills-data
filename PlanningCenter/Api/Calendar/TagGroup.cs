@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class TagGroup
+    public class TagGroup : EntityBase
     {
         public string CreatedAt { get; set; }
         public string Name { get; set; }

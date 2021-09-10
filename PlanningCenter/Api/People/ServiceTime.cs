@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class ServiceTime
+    public class ServiceTime : EntityBase
     {
         public string StartTime { get; set; }
         public string Day { get; set; }

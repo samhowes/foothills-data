@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Carrier
+    public class Carrier : EntityBase
     {
         public string Value { get; set; }
         public string Name { get; set; }

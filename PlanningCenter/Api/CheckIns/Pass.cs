@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Pass
+    public class Pass : EntityBase
     {
         public string Code { get; set; }
         public string Kind { get; set; }

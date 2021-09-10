@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class BlockoutException
+    public class BlockoutException : EntityBase
     {
         public string Date { get; set; }
         public string CreatedAt { get; set; }

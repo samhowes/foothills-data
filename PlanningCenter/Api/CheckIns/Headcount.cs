@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Headcount
+    public class Headcount : EntityBase
     {
         public string Total { get; set; }
         public string UpdatedAt { get; set; }

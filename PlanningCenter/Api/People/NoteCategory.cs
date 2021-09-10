@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class NoteCategory
+    public class NoteCategory : EntityBase
     {
         public string Name { get; set; }
         public string Locked { get; set; }

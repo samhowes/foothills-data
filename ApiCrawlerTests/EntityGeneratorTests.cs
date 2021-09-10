@@ -29,7 +29,7 @@ namespace ApiCrawlerTests
 
             text.Should().Be(@"namespace PlanningCenter.Api.foo
 {
-    public class bar
+    public class bar : EntityBase
     {
         public string MultiWord { get; set; }
     }
@@ -50,10 +50,10 @@ namespace ApiCrawlerTests
 
 namespace PlanningCenter.Api.foo
 {
-    public class Bar
+    public class Bar : EntityBase
     {
         [JsonProperty(""bar"")]
-        public string value { get; set; }
+        public string Value { get; set; }
     }
 }");
         }

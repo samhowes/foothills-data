@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class PlanNote
+    public class PlanNote : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

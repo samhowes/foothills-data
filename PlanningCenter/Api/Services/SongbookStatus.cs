@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class SongbookStatus
+    public class SongbookStatus : EntityBase
     {
         public string Status { get; set; }
         public string StatusCode { get; set; }

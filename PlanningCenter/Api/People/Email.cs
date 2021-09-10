@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Email
+    public class Email : EntityBase
     {
         public string Address { get; set; }
         public string Location { get; set; }

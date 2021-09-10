@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class ConnectedPerson
+    public class ConnectedPerson : EntityBase
     {
         public string GivenName { get; set; }
         public string FirstName { get; set; }

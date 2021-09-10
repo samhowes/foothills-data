@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Event
+    public class Event : EntityBase
     {
         public string Name { get; set; }
         public string Frequency { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class PeopleImportConflict
+    public class PeopleImportConflict : EntityBase
     {
         public string Kind { get; set; }
         public string Name { get; set; }

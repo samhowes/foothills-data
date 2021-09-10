@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class ServiceTypePath
+    public class ServiceTypePath : EntityBase
     {
         public string Path { get; set; }
     }

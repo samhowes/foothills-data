@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class ReportTemplate
+    public class ReportTemplate : EntityBase
     {
         public string Body { get; set; }
         public string CreatedAt { get; set; }

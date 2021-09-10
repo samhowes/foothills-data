@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace PlanningCenter.Api.People
 {
-    public class Note
+    public class Note : EntityBase
     {
         [JsonProperty("note")]
         public string Value { get; set; }

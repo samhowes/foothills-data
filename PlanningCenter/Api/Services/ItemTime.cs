@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class ItemTime
+    public class ItemTime : EntityBase
     {
         public string LiveStartAt { get; set; }
         public string LiveEndAt { get; set; }

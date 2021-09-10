@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Location
+    public class Location : EntityBase
     {
         public string DisplayPreference { get; set; }
         public string FullFormattedAddress { get; set; }

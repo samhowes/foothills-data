@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Webhooks
 {
-    public class AvailableEvent
+    public class AvailableEvent : EntityBase
     {
         public string Name { get; set; }
         public string App { get; set; }

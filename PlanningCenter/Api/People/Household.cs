@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Household
+    public class Household : EntityBase
     {
         public string Name { get; set; }
         public string MemberCount { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Event
+    public class Event : EntityBase
     {
         public string AttendanceRequestsEnabled { get; set; }
         public string AutomatedReminderEnabled { get; set; }

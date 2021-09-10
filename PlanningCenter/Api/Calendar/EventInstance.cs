@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class EventInstance
+    public class EventInstance : EntityBase
     {
         public string AllDayEvent { get; set; }
         public string CreatedAt { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class CustomSlide
+    public class CustomSlide : EntityBase
     {
         public string Body { get; set; }
         public string Label { get; set; }

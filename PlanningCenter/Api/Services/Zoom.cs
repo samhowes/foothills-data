@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Zoom
+    public class Zoom : EntityBase
     {
         public string AspectRatio { get; set; }
         public string ZoomLevel { get; set; }

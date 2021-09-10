@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class EventTime
+    public class EventTime : EntityBase
     {
         public string TotalCount { get; set; }
         public string StartsAt { get; set; }

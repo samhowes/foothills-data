@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Event
+    public class Event : EntityBase
     {
         public string ApprovalStatus { get; set; }
         public string CreatedAt { get; set; }

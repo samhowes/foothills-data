@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class LiveController
+    public class LiveController : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

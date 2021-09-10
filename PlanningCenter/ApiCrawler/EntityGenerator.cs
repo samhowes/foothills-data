@@ -25,7 +25,9 @@ namespace ApiCrawler
 
             var ns = generator.NamespaceDeclaration($"PlanningCenter.Api.{namespaceName}");
             
-            var clazz = generator.ClassDeclaration(example.Type, accessibility: Accessibility.Public);
+            var clazz = generator.ClassDeclaration(example.Type, 
+                accessibility: Accessibility.Public, 
+                baseType: generator.IdentifierName("EntityBase"));
 
             var usings = new HashSet<string>();
             foreach (var property in example.Attributes.Properties())

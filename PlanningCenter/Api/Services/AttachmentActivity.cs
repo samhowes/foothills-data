@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class AttachmentActivity
+    public class AttachmentActivity : EntityBase
     {
         public string Date { get; set; }
         public string AttachmentUrl { get; set; }

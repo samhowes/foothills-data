@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Resource
+    public class Resource : EntityBase
     {
         public string Description { get; set; }
         public string LastUpdated { get; set; }

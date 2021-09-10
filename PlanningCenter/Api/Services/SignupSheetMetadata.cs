@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class SignupSheetMetadata
+    public class SignupSheetMetadata : EntityBase
     {
         public string Conflicts { get; set; }
         public string TimeType { get; set; }

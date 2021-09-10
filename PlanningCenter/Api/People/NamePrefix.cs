@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class NamePrefix
+    public class NamePrefix : EntityBase
     {
         public string Value { get; set; }
     }

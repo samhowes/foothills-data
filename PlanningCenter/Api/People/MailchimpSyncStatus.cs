@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class MailchimpSyncStatus
+    public class MailchimpSyncStatus : EntityBase
     {
         public string Status { get; set; }
         public string Error { get; set; }

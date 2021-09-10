@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Attachment
+    public class Attachment : EntityBase
     {
         public string CreatedAt { get; set; }
         public string PageOrder { get; set; }

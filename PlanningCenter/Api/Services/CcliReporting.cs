@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class CcliReporting
+    public class CcliReporting : EntityBase
     {
         public string Digital { get; set; }
         public string Print { get; set; }

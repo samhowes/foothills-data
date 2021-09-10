@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Layout
+    public class Layout : EntityBase
     {
     }
 }

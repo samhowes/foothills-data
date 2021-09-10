@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class List
+    public class List : EntityBase
     {
         public string Name { get; set; }
         public string AutoRefresh { get; set; }

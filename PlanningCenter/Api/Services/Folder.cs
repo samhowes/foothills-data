@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Folder
+    public class Folder : EntityBase
     {
         public string CreatedAt { get; set; }
         public string Name { get; set; }

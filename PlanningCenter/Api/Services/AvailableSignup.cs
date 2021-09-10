@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class AvailableSignup
+    public class AvailableSignup : EntityBase
     {
         public string OrganizationName { get; set; }
         public string PlanningCenterUrl { get; set; }

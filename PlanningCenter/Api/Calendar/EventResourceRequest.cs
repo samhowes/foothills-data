@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class EventResourceRequest
+    public class EventResourceRequest : EntityBase
     {
         public string ApprovalSent { get; set; }
         public string ApprovalStatus { get; set; }

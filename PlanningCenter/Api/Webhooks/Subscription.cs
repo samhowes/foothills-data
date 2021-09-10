@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Webhooks
 {
-    public class Subscription
+    public class Subscription : EntityBase
     {
         public string Name { get; set; }
         public string Url { get; set; }

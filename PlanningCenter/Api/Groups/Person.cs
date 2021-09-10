@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Person
+    public class Person : EntityBase
     {
         public string Addresses { get; set; }
         public string AvatarUrl { get; set; }

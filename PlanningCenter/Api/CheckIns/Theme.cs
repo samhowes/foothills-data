@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Theme
+    public class Theme : EntityBase
     {
         public string ImageThumbnail { get; set; }
         public string Name { get; set; }

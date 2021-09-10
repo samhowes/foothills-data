@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Campus
+    public class Campus : EntityBase
     {
         public string Latitude { get; set; }
         public string Longitude { get; set; }

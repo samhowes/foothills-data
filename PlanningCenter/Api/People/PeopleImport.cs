@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class PeopleImport
+    public class PeopleImport : EntityBase
     {
         public string Attribs { get; set; }
         public string Status { get; set; }

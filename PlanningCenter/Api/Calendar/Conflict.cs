@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Conflict
+    public class Conflict : EntityBase
     {
         public string CreatedAt { get; set; }
         public string Note { get; set; }

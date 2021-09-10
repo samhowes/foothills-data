@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class AttachmentType
+    public class AttachmentType : EntityBase
     {
         public string Name { get; set; }
         public string Aliases { get; set; }

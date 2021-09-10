@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class GroupType
+    public class GroupType : EntityBase
     {
         public string ChurchCenterVisible { get; set; }
         public string ChurchCenterMapVisible { get; set; }

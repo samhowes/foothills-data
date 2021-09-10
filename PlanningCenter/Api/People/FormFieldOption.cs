@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class FormFieldOption
+    public class FormFieldOption : EntityBase
     {
         public string Label { get; set; }
         public string Sequence { get; set; }

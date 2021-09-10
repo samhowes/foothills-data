@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class ServiceType
+    public class ServiceType : EntityBase
     {
         public string ArchivedAt { get; set; }
         public string CreatedAt { get; set; }

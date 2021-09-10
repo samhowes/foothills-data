@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class ListCategory
+    public class ListCategory : EntityBase
     {
         public string Name { get; set; }
         public string CreatedAt { get; set; }

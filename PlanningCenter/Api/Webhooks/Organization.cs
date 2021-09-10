@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Webhooks
 {
-    public class Organization
+    public class Organization : EntityBase
     {
     }
 }

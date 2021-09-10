@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Station
+    public class Station : EntityBase
     {
         public string Online { get; set; }
         public string Mode { get; set; }

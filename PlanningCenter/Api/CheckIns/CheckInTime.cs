@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class CheckInTime
+    public class CheckInTime : EntityBase
     {
         public string Kind { get; set; }
         public string HasValidated { get; set; }

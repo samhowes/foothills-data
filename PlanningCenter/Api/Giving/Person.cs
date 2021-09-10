@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Giving
 {
-    public class Person
+    public class Person : EntityBase
     {
         public string Permissions { get; set; }
         public string EmailAddresses { get; set; }

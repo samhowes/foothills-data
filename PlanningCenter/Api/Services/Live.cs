@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Live
+    public class Live : EntityBase
     {
         public string SeriesTitle { get; set; }
         public string Title { get; set; }

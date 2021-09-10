@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Schedule
+    public class Schedule : EntityBase
     {
         public string SortDate { get; set; }
         public string Dates { get; set; }

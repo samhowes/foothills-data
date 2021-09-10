@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class PlanNoteCategory
+    public class PlanNoteCategory : EntityBase
     {
         public string CreatedAt { get; set; }
         public string DeletedAt { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Group
+    public class Group : EntityBase
     {
         public string ArchivedAt { get; set; }
         public string ContactEmail { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class FieldDatum
+    public class FieldDatum : EntityBase
     {
         public string Value { get; set; }
         public string File { get; set; }

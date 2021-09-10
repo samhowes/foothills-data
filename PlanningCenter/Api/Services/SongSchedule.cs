@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class SongSchedule
+    public class SongSchedule : EntityBase
     {
         public string ArrangementName { get; set; }
         public string KeyName { get; set; }

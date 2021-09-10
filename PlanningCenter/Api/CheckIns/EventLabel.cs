@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class EventLabel
+    public class EventLabel : EntityBase
     {
         public string Quantity { get; set; }
         public string ForRegular { get; set; }

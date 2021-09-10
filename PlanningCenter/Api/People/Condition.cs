@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Condition
+    public class Condition : EntityBase
     {
         public string Application { get; set; }
         public string DefinitionClass { get; set; }

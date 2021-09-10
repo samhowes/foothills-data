@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class FormField
+    public class FormField : EntityBase
     {
         public string FieldType { get; set; }
         public string Label { get; set; }

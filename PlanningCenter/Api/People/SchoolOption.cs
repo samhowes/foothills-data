@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class SchoolOption
+    public class SchoolOption : EntityBase
     {
         public string Value { get; set; }
         public string Sequence { get; set; }

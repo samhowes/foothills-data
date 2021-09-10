@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Resource
+    public class Resource : EntityBase
     {
         public string CreatedAt { get; set; }
         public string Kind { get; set; }

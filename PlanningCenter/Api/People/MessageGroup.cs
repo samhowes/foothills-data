@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class MessageGroup
+    public class MessageGroup : EntityBase
     {
         public string Uuid { get; set; }
         public string MessageType { get; set; }

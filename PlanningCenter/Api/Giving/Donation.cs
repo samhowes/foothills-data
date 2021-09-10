@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Giving
 {
-    public class Donation
+    public class Donation : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

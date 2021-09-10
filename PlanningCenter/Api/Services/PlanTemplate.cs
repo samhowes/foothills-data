@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class PlanTemplate
+    public class PlanTemplate : EntityBase
     {
         public string Name { get; set; }
         public string CreatedAt { get; set; }

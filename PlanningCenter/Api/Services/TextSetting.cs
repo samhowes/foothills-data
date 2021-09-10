@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class TextSetting
+    public class TextSetting : EntityBase
     {
         public string SchedulingRequestsEnabled { get; set; }
         public string GeneralEmailsEnabled { get; set; }

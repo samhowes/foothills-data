@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Team
+    public class Team : EntityBase
     {
         public string Name { get; set; }
         public string RehearsalTeam { get; set; }

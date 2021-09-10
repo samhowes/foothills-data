@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Person
+    public class Person : EntityBase
     {
         public string CreatedAt { get; set; }
         public string FirstName { get; set; }

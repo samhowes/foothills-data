@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Giving
 {
-    public class Batch
+    public class Batch : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

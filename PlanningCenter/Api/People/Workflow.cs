@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Workflow
+    public class Workflow : EntityBase
     {
         public string Name { get; set; }
         public string MyReadyCardCount { get; set; }

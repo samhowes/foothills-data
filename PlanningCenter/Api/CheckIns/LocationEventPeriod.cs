@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class LocationEventPeriod
+    public class LocationEventPeriod : EntityBase
     {
         public string RegularCount { get; set; }
         public string GuestCount { get; set; }

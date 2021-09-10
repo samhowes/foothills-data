@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class TimePreferenceOption
+    public class TimePreferenceOption : EntityBase
     {
         public string DayOfWeek { get; set; }
         public string CreatedAt { get; set; }

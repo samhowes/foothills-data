@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Person
+    public class Person : EntityBase
     {
         public string PhotoUrl { get; set; }
         public string PhotoThumbnailUrl { get; set; }

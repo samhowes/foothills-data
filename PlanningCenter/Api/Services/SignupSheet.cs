@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class SignupSheet
+    public class SignupSheet : EntityBase
     {
         public string SortDate { get; set; }
         public string GroupKey { get; set; }

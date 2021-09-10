@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class WorkflowStep
+    public class WorkflowStep : EntityBase
     {
         public string Name { get; set; }
         public string CreatedAt { get; set; }

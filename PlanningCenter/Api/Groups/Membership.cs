@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Groups
 {
-    public class Membership
+    public class Membership : EntityBase
     {
         public string AccountCenterIdentifier { get; set; }
         public string AvatarUrl { get; set; }

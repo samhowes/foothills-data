@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class WorkflowCardActivity
+    public class WorkflowCardActivity : EntityBase
     {
         public string Comment { get; set; }
         public string Content { get; set; }

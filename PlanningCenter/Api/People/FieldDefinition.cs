@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class FieldDefinition
+    public class FieldDefinition : EntityBase
     {
         public string DataType { get; set; }
         public string Name { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class WorkflowCard
+    public class WorkflowCard : EntityBase
     {
         public string SnoozeUntil { get; set; }
         public string Overdue { get; set; }

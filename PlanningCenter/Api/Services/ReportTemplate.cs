@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class ReportTemplate
+    public class ReportTemplate : EntityBase
     {
         public string Body { get; set; }
         public string Title { get; set; }

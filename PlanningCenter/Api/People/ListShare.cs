@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class ListShare
+    public class ListShare : EntityBase
     {
         public string Permission { get; set; }
         public string Group { get; set; }

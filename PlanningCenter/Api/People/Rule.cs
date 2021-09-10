@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Rule
+    public class Rule : EntityBase
     {
         public string Subset { get; set; }
         public string CreatedAt { get; set; }

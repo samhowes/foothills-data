@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Organization
+    public class Organization : EntityBase
     {
         public string DateFormatPattern { get; set; }
         public string TimeZoneOlson { get; set; }

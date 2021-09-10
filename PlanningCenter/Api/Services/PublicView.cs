@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class PublicView
+    public class PublicView : EntityBase
     {
         public string SeriesAndPlanTitles { get; set; }
         public string ItemLengths { get; set; }

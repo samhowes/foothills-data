@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class EventTime
+    public class EventTime : EntityBase
     {
         public string EndsAt { get; set; }
         public string StartsAt { get; set; }

@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Location
+    public class Location : EntityBase
     {
         public string Name { get; set; }
         public string Kind { get; set; }

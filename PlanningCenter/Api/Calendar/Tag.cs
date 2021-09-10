@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Calendar
 {
-    public class Tag
+    public class Tag : EntityBase
     {
         public string Color { get; set; }
         public string CreatedAt { get; set; }

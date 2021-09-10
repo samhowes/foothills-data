@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Media
+    public class Media : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

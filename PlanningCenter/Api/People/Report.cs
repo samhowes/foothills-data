@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.People
 {
-    public class Report
+    public class Report : EntityBase
     {
         public string Name { get; set; }
         public string Body { get; set; }

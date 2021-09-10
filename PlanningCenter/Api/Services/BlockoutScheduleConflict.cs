@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class BlockoutScheduleConflict
+    public class BlockoutScheduleConflict : EntityBase
     {
         public string Dates { get; set; }
         public string OrganizationName { get; set; }

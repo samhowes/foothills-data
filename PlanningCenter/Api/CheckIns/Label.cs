@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Label
+    public class Label : EntityBase
     {
         public string Name { get; set; }
         public string Xml { get; set; }

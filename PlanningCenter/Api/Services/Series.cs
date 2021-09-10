@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Series
+    public class Series : EntityBase
     {
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }

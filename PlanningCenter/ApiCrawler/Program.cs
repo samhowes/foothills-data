@@ -135,6 +135,7 @@ namespace ApiCrawler
 
             var editor = new Editor();
             var entityGenerator = new EntityGenerator(editor);
+            
             foreach (var apiSection in apiSections.Skip(1))
             {
                 Section(apiSection.Name);

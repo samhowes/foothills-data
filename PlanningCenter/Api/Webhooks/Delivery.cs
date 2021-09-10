@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Webhooks
 {
-    public class Delivery
+    public class Delivery : EntityBase
     {
         public string Status { get; set; }
         public string RequestHeaders { get; set; }

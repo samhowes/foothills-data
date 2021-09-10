@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class Tag
+    public class Tag : EntityBase
     {
         public string Name { get; set; }
     }

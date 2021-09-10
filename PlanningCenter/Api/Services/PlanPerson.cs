@@ -1,6 +1,6 @@
 namespace PlanningCenter.Api.Services
 {
-    public class PlanPerson
+    public class PlanPerson : EntityBase
     {
         public string Status { get; set; }
         public string CreatedAt { get; set; }
