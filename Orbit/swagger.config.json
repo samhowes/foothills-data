@@ -1,0 +1,5 @@
+{
+    "packageName": "Orbit.Api",
+    "sourceFolder": ".",
+    "targetFramework": "v5.0"
+  }

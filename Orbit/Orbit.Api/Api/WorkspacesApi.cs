@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using RestSharp.Portable;
 using Orbit.Api.Client;
+using Orbit.Api.Model;
 
 namespace Orbit.Api.Api
 {
@@ -29,8 +30,8 @@ namespace Orbit.Api.Api
         /// 
         /// </remarks>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns></returns>
-        void WorkspacesGet ();
+        /// <returns>List&lt;Workspace&gt;</returns>
+        List<Workspace> WorkspacesGet ();
 
         /// <summary>
         /// Get all workspaces for the current user
@@ -39,8 +40,8 @@ namespace Orbit.Api.Api
         /// 
         /// </remarks>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>ApiResponse of Object(void)</returns>
-        ApiResponse<Object> WorkspacesGetWithHttpInfo ();
+        /// <returns>ApiResponse of List&lt;Workspace&gt;</returns>
+        ApiResponse<List<Workspace>> WorkspacesGetWithHttpInfo ();
         /// <summary>
         /// Get a workspace
         /// </summary>
@@ -71,8 +72,8 @@ namespace Orbit.Api.Api
         /// 
         /// </remarks>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>Task of void</returns>
-        System.Threading.Tasks.Task WorkspacesGetAsync ();
+        /// <returns>Task of List&lt;Workspace&gt;</returns>
+        System.Threading.Tasks.Task<List<Workspace>> WorkspacesGetAsync ();
 
         /// <summary>
         /// Get all workspaces for the current user
@@ -81,8 +82,8 @@ namespace Orbit.Api.Api
         /// 
         /// </remarks>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>Task of ApiResponse</returns>
-        System.Threading.Tasks.Task<ApiResponse<Object>> WorkspacesGetAsyncWithHttpInfo ();
+        /// <returns>Task of ApiResponse (List&lt;Workspace&gt;)</returns>
+        System.Threading.Tasks.Task<ApiResponse<List<Workspace>>> WorkspacesGetAsyncWithHttpInfo ();
         /// <summary>
         /// Get a workspace
         /// </summary>
@@ -219,18 +220,19 @@ namespace Orbit.Api.Api
         /// Get all workspaces for the current user 
         /// </summary>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns></returns>
-        public void WorkspacesGet ()
+        /// <returns>List&lt;Workspace&gt;</returns>
+        public List<Workspace> WorkspacesGet ()
         {
-             WorkspacesGetWithHttpInfo();
+             ApiResponse<List<Workspace>> localVarResponse = WorkspacesGetWithHttpInfo();
+             return localVarResponse.Data;
         }
 
         /// <summary>
         /// Get all workspaces for the current user 
         /// </summary>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>ApiResponse of Object(void)</returns>
-        public ApiResponse<Object> WorkspacesGetWithHttpInfo ()
+        /// <returns>ApiResponse of List&lt;Workspace&gt;</returns>
+        public ApiResponse< List<Workspace> > WorkspacesGetWithHttpInfo ()
         {
 
             var localVarPath = "./workspaces";
@@ -273,19 +275,20 @@ namespace Orbit.Api.Api
                 if (exception != null) throw exception;
             }
 
-            return new ApiResponse<Object>(localVarStatusCode,
+            return new ApiResponse<List<Workspace>>(localVarStatusCode,
                 localVarResponse.Headers.ToDictionary(x => x.Key, x => string.Join(",", x.Value)),
-                null);
+                (List<Workspace>) this.Configuration.ApiClient.Deserialize(localVarResponse, typeof(List<Workspace>)));
         }
 
         /// <summary>
         /// Get all workspaces for the current user 
         /// </summary>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>Task of void</returns>
-        public async System.Threading.Tasks.Task WorkspacesGetAsync ()
+        /// <returns>Task of List&lt;Workspace&gt;</returns>
+        public async System.Threading.Tasks.Task<List<Workspace>> WorkspacesGetAsync ()
         {
-             await WorkspacesGetAsyncWithHttpInfo();
+             ApiResponse<List<Workspace>> localVarResponse = await WorkspacesGetAsyncWithHttpInfo();
+             return localVarResponse.Data;
 
         }
 
@@ -293,8 +296,8 @@ namespace Orbit.Api.Api
         /// Get all workspaces for the current user 
         /// </summary>
         /// <exception cref="Orbit.Api.Client.ApiException">Thrown when fails to make API call</exception>
-        /// <returns>Task of ApiResponse</returns>
-        public async System.Threading.Tasks.Task<ApiResponse<Object>> WorkspacesGetAsyncWithHttpInfo ()
+        /// <returns>Task of ApiResponse (List&lt;Workspace&gt;)</returns>
+        public async System.Threading.Tasks.Task<ApiResponse<List<Workspace>>> WorkspacesGetAsyncWithHttpInfo ()
         {
 
             var localVarPath = "./workspaces";
@@ -337,9 +340,9 @@ namespace Orbit.Api.Api
                 if (exception != null) throw exception;
             }
 
-            return new ApiResponse<Object>(localVarStatusCode,
+            return new ApiResponse<List<Workspace>>(localVarStatusCode,
                 localVarResponse.Headers.ToDictionary(x => x.Key, x => string.Join(",", x.Value)),
-                null);
+                (List<Workspace>) this.Configuration.ApiClient.Deserialize(localVarResponse, typeof(List<Workspace>)));
         }
 
         /// <summary>
