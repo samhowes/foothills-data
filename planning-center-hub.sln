@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.6.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orbit", "Orbit", "{A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}"
+ProjectSection(SolutionItems) = preProject
+	Orbit\swagger.yaml = Orbit\swagger.yaml
+EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sync", "Orbit\Sync\Sync.csproj", "{F07A6EE0-7C34-4623-B5AD-DDCAB8C43F02}"
 EndProject
@@ -18,6 +21,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PlanningCenter", "PlanningCenter", "{3E2B512E-BA95-42DE-BA03-AAA89A5FCC22}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiCrawlerTests", "ApiCrawlerTests\ApiCrawlerTests.csproj", "{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orbit.Api", "Orbit\Orbit.Api\Orbit.Api.csproj", "{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -80,6 +85,18 @@ Global
 		{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82}.Release|x64.Build.0 = Release|Any CPU
 		{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82}.Release|x86.ActiveCfg = Release|Any CPU
 		{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82}.Release|x86.Build.0 = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|x64.Build.0 = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Debug|x86.Build.0 = Debug|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|x64.ActiveCfg = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|x64.Build.0 = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|x86.ActiveCfg = Release|Any CPU
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F07A6EE0-7C34-4623-B5AD-DDCAB8C43F02} = {A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}
@@ -87,5 +104,6 @@ Global
 		{14C3E79D-5376-433C-9123-ABC739508423} = {9896C2FF-FA5E-4C9E-98E1-D5AE76B51135}
 		{3E2B512E-BA95-42DE-BA03-AAA89A5FCC22} = {63CF8188-EE0D-4B6C-8B4B-3FCAF6582579}
 		{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82} = {3E2B512E-BA95-42DE-BA03-AAA89A5FCC22}
+		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8} = {A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}
 	EndGlobalSection
 EndGlobal

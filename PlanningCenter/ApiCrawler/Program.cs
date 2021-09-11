@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Humanizer;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Playwright;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using static ApiCrawler.Logger;
 
 namespace ApiCrawler
@@ -110,7 +112,102 @@ namespace ApiCrawler
             return json!;
         }
     }
+
+    public class GraphVersion : Node<GraphVersion.Attributes>
+    {
+        public class Attributes
+        {
+            public bool Beta { get; set; }
+            public string Details { get; set; }
+        }
+
+        public class Relationships
+        {
+            public Wrapper<JObject> PreviousVersion { get; set; }
+            public Wrapper<JObject> NextVersion { get; set; }
+            
+        }
+        
+    }
     
+    public class Graph
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+    }
+    
+    public class Node<T>
+    {
+        public string Type { get; set; }
+        public string Id { get; set; }
+        public T Attributes { get; set; }
+        public JObject Relationships { get; set; }
+    }
+
+    public class ApiVersion
+    {
+        public bool Beta { get; set; }
+        public string Details { get; set; }
+    }
+    
+    public class ApiDocsClient
+    {
+        private readonly HttpClient _http;
+        private readonly JsonSerializerSettings _jsonSettings;
+
+        public ApiDocsClient()
+        {
+            _http = new HttpClient()
+            {
+                BaseAddress = new Uri("https://api.planningcenteronline.com/")
+            };
+            _jsonSettings = new JsonSerializerSettings()
+            {
+                ContractResolver = new DefaultContractResolver()
+                {
+                    NamingStrategy = new SnakeCaseNamingStrategy()
+                }
+            };
+        }
+
+        public async Task GetSectionAsync(string sectionName)
+        {
+            var graph = await GetJsonAsync<Node<Graph>>($"{sectionName}/v2/documentation");
+
+            var versions = graph!.Relationships.Property("versions")!.Value.ToObject<Wrapper<List<Node<ApiVersion>>>>()!.Data;
+
+            var latestVersion = versions!.First();
+
+            var entities = latestVersion.Relationships.Property("vertices")!.ToObject<Wrapper<List<Node<EntityInfo>>>>();
+            
+
+
+        }
+
+        private async Task<T?> GetJsonAsync<T>(string url)
+        {
+            var response = await _http.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to get {url}: {content}");
+            }
+
+            return JsonConvert.DeserializeObject<Wrapper<T>>(content)!.Data;
+        }
+    }
+
+    public class EntityInfo
+    {
+        public string Name { get; set;  }
+        public bool Deprecated { get; set; }
+    }
+
+    public class Wrapper<T>
+    {
+        public T Data { get; set; }
+    }
+
     class Program
     {
         static async Task<int> Main(string[] args)
@@ -129,6 +226,8 @@ namespace ApiCrawler
             }
             
             var docs = await ApiDocs.CreateAsync();
+            var docsClient = new ApiDocsClient();
+            
 
             var apiSections = await docs.GetSectionsAsync();
             
@@ -140,6 +239,9 @@ namespace ApiCrawler
             {
                 var entityGenerator = new EntityGenerator(editor);
                 Section(apiSection.Name);
+
+                await docsClient.GetSectionAsync(apiSection.Name.ToLower());
+                
                 var sectionName = apiSection.Name.Pascalize().Replace("-", "");
                 var sectionFolder = Path.Combine(apiProjectDirectory, sectionName);
                 if (Directory.Exists(sectionFolder))

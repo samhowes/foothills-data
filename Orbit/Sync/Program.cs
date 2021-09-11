@@ -4,6 +4,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Unicode;
 using System.Threading.Tasks;
+using Orbit.Api;
+using Orbit.Api.Api;
+using Orbit.Api.Client;
+using PlanningCenter.Api;
+using PlanningCenter.Api.CheckIns;
 
 namespace Sync
 {
@@ -11,20 +16,38 @@ namespace Sync
     {
         static async Task Main(string[] args)
         {
-            var creds = Encoding.UTF8.GetBytes(
-                Environment.GetEnvironmentVariable("PC_APPLICATION_ID") + ":" +
-                Environment.GetEnvironmentVariable("PC_SECRET"));
+            var checkinsClient = PlanningCenterClient.Create(Constants.CheckInsPrefix);
+            // Configure API key authorization: bearer
+            Configuration.Default.ApiKey.Add("Authorization", "Bearer " + Environment.GetEnvironmentVariable("ORBIT_API_TOKEN"));
+            // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+            // Configuration.Default.ApiKeyPrefix.Add("Authorization", "Bearer");
 
-            var peopleClient = new HttpClient()
-            {
-                BaseAddress = new Uri("https://api.planningcenteronline.com/people/v2"),
-            };
-            peopleClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(creds));
+            var apiInstance = new ActivitiesApi();
+            var workspaceSlug = "sam-workspace";  // string | 
+            // var activityTags = activityTags_example;  // string |  (optional) 
+            // var affiliation = affiliation_example;  // string |  (optional) 
+            // var memberTags = memberTags_example;  // string |  (optional) 
+            // var orbitLevel = orbitLevel_example;  // string |  (optional) 
+            // var activityType = activityType_example;  // string |  (optional) 
+            // var weight = weight_example;  // string |  (optional) 
+            // var identity = identity_example;  // string |  (optional) 
+            // var location = location_example;  // string |  (optional) 
+            // var company = company_example;  // string |  (optional) 
+            // var startDate = startDate_example;  // string |  (optional) 
+            // var endDate = endDate_example;  // string |  (optional) 
+            // var page = page_example;  // string |  (optional) 
+            // var direction = direction_example;  // string |  (optional) 
+            // var items = items_example;  // string |  (optional) 
+            // var sort = sort_example;  // string |  (optional) 
+            // var type = type_example;  // string |  (optional) 
 
-            var people = await peopleClient.GetAsync("");
+            // List activities for a workspace
+            
+            var result = await apiInstance.WorkspaceSlugActivitiesGetAsync(workspaceSlug);
 
-            var body = await people.Content.ReadAsStringAsync();
+            // var checkins = await checkinsClient.GetAsync<CheckIn>("check_ins");
+            
+            
         }
     }
 }
