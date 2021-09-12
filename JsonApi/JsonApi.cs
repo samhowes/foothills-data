@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
@@ -27,7 +28,7 @@ namespace JsonApi
     {
         public Links Links { get; set; }
         
-        public Metadata Meta { get; set; }   
+        public Metadata Meta { get; set; }
     }
     
     public class Response<T> : Response
@@ -48,6 +49,7 @@ namespace JsonApi
 
     public class Metadata
     {
+        public int PageCount => (int)Math.Ceiling(TotalCount / (decimal)Count);
         public int TotalCount { get; set; }
         public int Count { get; set; }
         public Next Next { get; set; }
@@ -68,5 +70,6 @@ namespace JsonApi
 
         public string Self => SafeGet("self")!;
         public string? Next => SafeGet("next");
+        public string? Prev => SafeGet("pref");
     }
 }

@@ -1,132 +1,87 @@
-using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using JsonApi;
 using Orbit.Api;
-using Orbit.Api.Model;
 using PlanningCenter.Api;
-using PlanningCenter.Api.CheckIns;
 using Serilog;
 
 namespace Sync
 {
+    public class SyncDependencies
+    {
+        public PlanningCenterClient PeopleClient { get; }
+        public LogDbContext LogDb { get; }
+        public OrbitApiClient OrbitClient { get; }
+        public string WorkspaceSlug { get; }
+        public ILogger Log { get; }
+
+        public SyncDependencies(PlanningCenterClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, string workspaceSlug, ILogger log)
+        {
+            PeopleClient = peopleClient;
+            LogDb = logDb;
+            OrbitClient = orbitClient;
+            WorkspaceSlug = workspaceSlug;
+            Log = log;
+        }
+    }
+
+    interface ISync
+    {
+        string From { get; }
+        string To { get; }
+
+        Task<Response> GetInitialDataAsync();
+        Task ProcessBatchAsync(Stats stats);
+        Task<bool> GetNextBatchAsync();
+    }
+    
     public class Synchronizer
     {
         private readonly ILogger _log;
-        private readonly LogDbContext _logDb;
-        private readonly PlanningCenterClient _peopleClient;
-        private readonly OrbitApiClient _orbitClient;
-        private readonly string _workspaceSlug;
+        private readonly SyncDependencies _deps;
 
-        public Synchronizer(ILogger log, LogDbContext logDb, PlanningCenterClient peopleClient,
-            OrbitApiClient orbitClient, string workspaceSlug)
+
+        public Synchronizer(ILogger log, SyncDependencies deps)
         {
             _log = log;
-            _logDb = logDb;
-            _peopleClient = peopleClient;
-            _orbitClient = orbitClient;
-            _workspaceSlug = workspaceSlug;
-        }
-
-        interface ISync
-        {
-            
-        }
-        
-        class PeopleToMembersSync : ISync
-        {
-            
+            _deps = deps;
         }
         
         public async Task PeopleToMembers()
         {
-            
-            var people = await _peopleClient.GetAsync<Person>("people");
-
+            var impl = new PeopleToMembersSync(_deps);
+            await Sync(impl);
+        }
+        
+        private async Task Sync(ISync impl)
+        {
+            _log.Information("Starting sync from {SyncFrom} to {SyncTo}", impl.From, impl.To);
             using var stats = new Stats();
-            var existing = await _logDb.Mappings.ToDictionaryAsync(m => m.PlanningCenterId);
+            var initialData = await impl.GetInitialDataAsync();
+
+            _log.Information("Found {QueueCount} {EntityType} to sync: {Url}",
+                initialData.Meta.TotalCount, impl.From, initialData.Links.Self);
+            _log.Information("Using batch size of {BatchSize} for {PageCount} pages", 
+                initialData.Meta.Count, initialData.Meta.PageCount);
+
             for (;;)
             {
-                _log.Information("Found {PeopleCount} out of {TotalCount} people to sync: {Url}",
-                    people.Data.Count, people.Meta.TotalCount, people.Links.Self);
                 using var batchStats = new Stats();
-                foreach (var person in people.Data)
-                {
-                    if (existing.TryGetValue(person.Id, out var mapping))
-                    {
-                        stats.Skipped++;
-                        continue;
-                    }
-
-                    mapping = new Mapping()
-                    {
-                        PlanningCenterId = person.Id,
-                    };
-                    var tags = new List<string>();
-                    if (person.Attributes.Child == "true")
-                        tags.Add("child");
-
-                    var member = new UpsertMember()
-                    {
-                        Birthday = person.Attributes.Birthdate,
-                        Name = person.Attributes.Name,
-                        Slug = person.Id,
-                        TagsToAdd = string.Join(",", tags),
-                        Identity = new Identity(source: "planningcenter")
-                        {
-                            Email = $"{person.Id}@foothillsuu.org",
-                            Name = person.Attributes.Name,
-                            Uid = person.Id,
-                            Url = person.Links.Self,
-                        }
-                    };
-
-                    try
-                    {
-                        var created = await _orbitClient.PostAsync<Member>($"{_workspaceSlug}/members", member);
-                        mapping.OrbitId = created.Data.Id;
-                        batchStats.Success++;
-                    }
-                    catch (OrbitApiException orbitEx)
-                    {
-                        mapping.Error = orbitEx.Message;
-                        _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
-                            mapping.Error);
-                        batchStats.Failed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
-                        mapping.Error = ex.ToString();
-                        batchStats.Failed++;
-                    }
-
-                    _logDb.Mappings.Add(mapping);
-                    await _logDb.SaveChangesAsync();
-                }
-
+                var hasMore = await impl.GetNextBatchAsync();
+                if (!hasMore) break;
+                
+                await impl.ProcessBatchAsync(batchStats);
                 _log.Information(
-                    "Uploaded {SuccessCount} members to Orbit in {SecondsElapsed} at {RecordRate}; skipped {SkippedCount}; failed {ErrorCount}",
-                    batchStats.Success, batchStats.SecondsElapsed, batchStats.RecordsPerSecond, batchStats.Skipped,
-                    batchStats.Failed);
+                    "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
+                    batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
 
                 stats.Accumulate(batchStats);
                 _log.Information(
-                    "Overall: elapsed: {Elapsed}; total queued {QueueCount}; total processed {TotalProcessed}; success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
-                    stats.SecondsElapsed, people.Meta.TotalCount, stats.Total, stats.Success, stats.Skipped,
+                    "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
+                    "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
+                    stats.SecondsElapsed, stats.Total, initialData.Meta.TotalCount, stats.Success, stats.Skipped,
                     stats.Failed, stats.RecordsPerSecond);
-
-                if (!string.IsNullOrEmpty(people.Links.Next))
-                {
-                    _log.Information("Moving to next page...");
-                    people = await _peopleClient.GetAsync<Person>(people.Links.Next);
-                }
-                else
-                {
-                    _log.Information("No more pages");
-                    break;
-                }
             }
+            _log.Information("Sync complete");
         }
     }
 }

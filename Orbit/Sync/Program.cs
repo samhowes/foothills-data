@@ -23,7 +23,8 @@ namespace Sync
             var workspaceSlug = "sam-workspace";
             var logDb = await GetLog();
 
-            var sync = new Synchronizer(log, logDb, peopleClient, orbitClient, workspaceSlug);
+            var deps = new SyncDependencies(peopleClient, logDb, orbitClient, workspaceSlug, log);
+            var sync = new Synchronizer(log, deps);
             
             log.Information("Starting sync to workspace {WorkspaceSlug}...", workspaceSlug);
             await sync.PeopleToMembers();
