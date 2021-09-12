@@ -28,8 +28,19 @@ namespace Sync
             _workspaceSlug = workspaceSlug;
         }
 
+        interface ISync
+        {
+            
+        }
+        
+        class PeopleToMembersSync : ISync
+        {
+            
+        }
+        
         public async Task PeopleToMembers()
         {
+            
             var people = await _peopleClient.GetAsync<Person>("people");
 
             using var stats = new Stats();

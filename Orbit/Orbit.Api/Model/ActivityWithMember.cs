@@ -17,6 +17,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+#pragma warning disable 8625
 
 
 namespace Orbit.Api.Model
