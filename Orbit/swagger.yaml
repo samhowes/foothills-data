@@ -37,8 +37,10 @@ components:
       properties:
         name:
           type: string
+          description: name
         slug:
           type: string
+          description: slug
     activity:
       title: Custom Activity
       type: object

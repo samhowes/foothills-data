@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace PlanningCenter.Api
+namespace Orbit.Api
 {
-    
     public abstract class Resource
     {
         public string Type { get; set; }
@@ -61,43 +60,29 @@ namespace PlanningCenter.Api
 
     public class Links : Dictionary<string, string>
     {
-        public string? SafeGet(string key)
-        {
-            TryGetValue(key, out var value);
-            return value;
-        }
-
-        public string Self => SafeGet("self")!;
-        public string? Next => SafeGet("next");
+        public string Self => this["self"];
+        public string Next => this["self"];
     }
-
-
-    public static class Constants
-    {
-        public const string CheckInsPrefix = "check-ins";
-        public const string PeoplePrefix = "people";
-    }
-
-    public class PlanningCenterClient
+    
+    public class OrbitApiClient
     {
         private readonly JsonSerializerSettings _jsonSettings;
         public HttpClient HttpClient { get; }
 
-        public static PlanningCenterClient Create(string apiPrefix, string? applicationId = null, string? secret = null)
+        public static OrbitApiClient Create(string apiPrefix, string? apiToken = null)
         {
-            applicationId ??= Environment.GetEnvironmentVariable("PCO_APPLICATION_ID"); 
-            secret ??= Environment.GetEnvironmentVariable("PCO_SECRET");
-
-            var headerValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{applicationId}:{secret}"));
+            apiToken ??= Environment.GetEnvironmentVariable("ORBIT_API_TOKEN");
+            
             var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", headerValue);
-            return new PlanningCenterClient(client, apiPrefix);
+                new AuthenticationHeaderValue("Bearer", apiToken);
+            return new OrbitApiClient(client, apiPrefix);
         }
-        public PlanningCenterClient(HttpClient httpClient, string apiPrefix)
+
+        public OrbitApiClient(HttpClient httpClient, string apiPrefix)
         {
             HttpClient = httpClient;
-            HttpClient.BaseAddress = new Uri($"https://api.planningcenteronline.com/{apiPrefix}/v2/");
+            HttpClient.BaseAddress = new Uri($"https://app.orbit.love/api/v1/");
             _jsonSettings = new JsonSerializerSettings()
             {
                 ContractResolver = new DefaultContractResolver()
@@ -107,15 +92,38 @@ namespace PlanningCenter.Api
             };
         }
 
-        public Task<Response<List<Resource<Dictionary<string, string>>>>> GetGenericAsync(string url)
-            => GetAsync<Dictionary<string, string>>(url);
-
         public async Task<Response<List<Resource<T>>>> GetAsync<T>(string url)
         {
             var response = await HttpClient.GetAsync(url);
+            return await ReadResponse<Response<List<Resource<T>>>>(response);
+        }
+
+        private async Task<T> ReadResponse<T>(HttpResponseMessage response)
+        {
             var body = await response.Content.ReadAsStringAsync();
-            var typed = JsonConvert.DeserializeObject<Response<List<Resource<T>>>>(body, _jsonSettings)!;
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new OrbitApiException($"Http failure for {response.RequestMessage!.RequestUri}: {body}");
+            }
+            var typed = JsonConvert.DeserializeObject<T>(body, _jsonSettings)!;
             return typed;
+        }
+
+        public async Task<Response<Resource<T>>> PostAsync<T>(string url, object data)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(JsonConvert.SerializeObject(data, _jsonSettings));
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            var response = await HttpClient.SendAsync(request);
+            return await ReadResponse<Response<Resource<T>>>(response);
+        }
+    }
+
+    public class OrbitApiException : Exception
+    {
+        public OrbitApiException(string message) : base(message)
+        {
+            
         }
     }
 }

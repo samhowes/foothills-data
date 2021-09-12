@@ -7,6 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orbit", "Orbit", "{A1F0C0A9
 ProjectSection(SolutionItems) = preProject
 	Orbit\swagger.yaml = Orbit\swagger.yaml
 	Orbit\generate_api.sh = Orbit\generate_api.sh
+	Orbit\swagger.config.json = Orbit\swagger.config.json
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sync", "Orbit\Sync\Sync.csproj", "{F07A6EE0-7C34-4623-B5AD-DDCAB8C43F02}"

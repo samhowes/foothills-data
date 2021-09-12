@@ -22,18 +22,36 @@ using Newtonsoft.Json.Converters;
 namespace Orbit.Api.Model
 {
     /// <summary>
-    /// OneOfcustomOrPostActivity
+    /// Workspace
     /// </summary>
     [DataContract]
-        public partial class OneOfcustomOrPostActivity :  IEquatable<OneOfcustomOrPostActivity>
+        public partial class Workspace :  IEquatable<Workspace>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="OneOfcustomOrPostActivity" /> class.
+        /// Initializes a new instance of the <see cref="Workspace" /> class.
         /// </summary>
-        public OneOfcustomOrPostActivity()
+        /// <param name="name">name.</param>
+        /// <param name="slug">slug.</param>
+        public Workspace(string name = default(string), string slug = default(string))
         {
+            this.Name = name;
+            this.Slug = slug;
         }
         
+        /// <summary>
+        /// name
+        /// </summary>
+        /// <value>name</value>
+        [DataMember(Name="name", EmitDefaultValue=false)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// slug
+        /// </summary>
+        /// <value>slug</value>
+        [DataMember(Name="slug", EmitDefaultValue=false)]
+        public string Slug { get; set; }
+
         /// <summary>
         /// Returns the string presentation of the object
         /// </summary>
@@ -41,7 +59,9 @@ namespace Orbit.Api.Model
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append("class OneOfcustomOrPostActivity {\n");
+            sb.Append("class Workspace {\n");
+            sb.Append("  Name: ").Append(Name).Append("\n");
+            sb.Append("  Slug: ").Append(Slug).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
         }
@@ -62,20 +82,30 @@ namespace Orbit.Api.Model
         /// <returns>Boolean</returns>
         public override bool Equals(object input)
         {
-            return this.Equals(input as OneOfcustomOrPostActivity);
+            return this.Equals(input as Workspace);
         }
 
         /// <summary>
-        /// Returns true if OneOfcustomOrPostActivity instances are equal
+        /// Returns true if Workspace instances are equal
         /// </summary>
-        /// <param name="input">Instance of OneOfcustomOrPostActivity to be compared</param>
+        /// <param name="input">Instance of Workspace to be compared</param>
         /// <returns>Boolean</returns>
-        public bool Equals(OneOfcustomOrPostActivity input)
+        public bool Equals(Workspace input)
         {
             if (input == null)
                 return false;
 
-            return false;
+            return 
+                (
+                    this.Name == input.Name ||
+                    (this.Name != null &&
+                    this.Name.Equals(input.Name))
+                ) && 
+                (
+                    this.Slug == input.Slug ||
+                    (this.Slug != null &&
+                    this.Slug.Equals(input.Slug))
+                );
         }
 
         /// <summary>
@@ -87,6 +117,10 @@ namespace Orbit.Api.Model
             unchecked // Overflow is fine, just wrap
             {
                 int hashCode = 41;
+                if (this.Name != null)
+                    hashCode = hashCode * 59 + this.Name.GetHashCode();
+                if (this.Slug != null)
+                    hashCode = hashCode * 59 + this.Slug.GetHashCode();
                 return hashCode;
             }
         }

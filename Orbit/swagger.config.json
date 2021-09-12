@@ -1,5 +1,7 @@
 {
-    "packageName": "Orbit.Api",
-    "sourceFolder": ".",
-    "targetFramework": "v5.0"
-  }
+  "packageName": "Orbit.Api",
+  "sourceFolder": ".",
+  "targetFramework": "v5.0",
+  "netCoreProjectFile": true,
+  "optionalAssemblyInfo": false
+}

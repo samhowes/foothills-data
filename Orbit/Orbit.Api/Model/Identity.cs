@@ -17,7 +17,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using SwaggerDateConverter = Orbit.Api.Client.SwaggerDateConverter;
+
 
 namespace Orbit.Api.Model
 {

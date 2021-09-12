@@ -17,7 +17,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using SwaggerDateConverter = Orbit.Api.Client.SwaggerDateConverter;
+
 
 namespace Orbit.Api.Model
 {
@@ -50,7 +50,7 @@ namespace Orbit.Api.Model
         /// <param name="email">The member&#x27;s email.</param>
         /// <param name="linkedin">The member&#x27;s LinkedIn username, without the in/ or pub/.</param>
         /// <param name="devto">The member&#x27;s dev.to username.</param>
-        public Member(string bio = default(string), string birthday = default(string), string company = default(string), string title = default(string), string location = default(string), string name = default(string), string pronouns = default(string), string shippingAddress = default(string), string slug = default(string), string tagsToAdd = default(string), string tags = default(string), string tagList = default(string), string tshirt = default(string), bool? teammate = default(bool?), string url = default(string), string github = default(string), string twitter = default(string), string email = default(string), string linkedin = default(string), string devto = default(string))
+        public Member(string bio = default(string), string birthday = default(string), string company = default(string), string title = default(string), string location = default(string), string name = default(string), string pronouns = default(string), string shippingAddress = default(string), string slug = default(string), string tagsToAdd = default(string), List<string> tags = default(List<string>), List<string> tagList = default(List<string>), string tshirt = default(string), bool? teammate = default(bool?), string url = default(string), string github = default(string), string twitter = default(string), string email = default(string), string linkedin = default(string), string devto = default(string))
         {
             this.Bio = bio;
             this.Birthday = birthday;
@@ -140,14 +140,14 @@ namespace Orbit.Api.Model
         /// </summary>
         /// <value>Replaces all tags for the member; comma-separated string or array</value>
         [DataMember(Name="tags", EmitDefaultValue=false)]
-        public string Tags { get; set; }
+        public List<string> Tags { get; set; }
 
         /// <summary>
         /// Deprecated: Please use the tags attribute instead
         /// </summary>
         /// <value>Deprecated: Please use the tags attribute instead</value>
         [DataMember(Name="tag_list", EmitDefaultValue=false)]
-        public string TagList { get; set; }
+        public List<string> TagList { get; set; }
 
         /// <summary>
         /// Gets or Sets Tshirt
