@@ -70,6 +70,6 @@ namespace JsonApi
 
         public string Self => SafeGet("self")!;
         public string? Next => SafeGet("next");
-        public string? Prev => SafeGet("pref");
+        public string? Prev => SafeGet("prev");
     }
 }

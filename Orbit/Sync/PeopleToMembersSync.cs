@@ -5,20 +5,27 @@ using JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Orbit.Api;
 using Orbit.Api.Model;
+using PlanningCenter.Api;
 using PlanningCenter.Api.CheckIns;
+using Serilog;
 
 namespace Sync
 {
     public class PeopleToMembersSync : ISync
     {
-        private readonly SyncDependencies _deps;
+        private readonly PeopleClient _peopleClient;
+        private readonly LogDbContext _logDb;
+        private readonly OrbitApiClient _orbitClient;
+        private readonly ILogger _log;
         private Dictionary<string,Mapping> _existing;
         private Response<List<Resource<Person>>> _people;
-
-
-        public PeopleToMembersSync(SyncDependencies deps)
+        
+        public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, ILogger log)
         {
-            _deps = deps;
+            _peopleClient = peopleClient;
+            _logDb = logDb;
+            _orbitClient = orbitClient;
+            _log = log;
         }
 
         public string From => "People";
@@ -26,8 +33,8 @@ namespace Sync
 
         public async Task<Response> GetInitialDataAsync()
         {
-            _people = await _deps.PeopleClient.GetAsync<Person>("people");
-            _existing = await _deps.LogDb.Mappings.ToDictionaryAsync(m => m.PlanningCenterId);
+            _people = await _peopleClient.GetAsync<Person>("people");
+            _existing = await _logDb.Mappings.ToDictionaryAsync(m => m.PlanningCenterId);
             return _people;
         }
 
@@ -35,7 +42,7 @@ namespace Sync
         {
             if (string.IsNullOrEmpty(_people.Links.Prev)) return true;
             if (string.IsNullOrEmpty(_people.Links.Next)) return false;
-            _people = await _deps.PeopleClient.GetAsync<Person>(_people.Links.Next);
+            _people = await _peopleClient.GetAsync<Person>(_people.Links.Next);
             return true;
         }
 
@@ -74,27 +81,27 @@ namespace Sync
 
                 try
                 {
-                    var created = await _deps.OrbitClient.PostAsync<Member>($"{_deps.WorkspaceSlug}/members", member);
+                    var created = await _orbitClient.PostAsync<Member>("members", member);
                     mapping.OrbitId = created.Data.Id;
                     stats.Success++;
                 }
                 catch (OrbitApiException orbitEx)
                 {
                     mapping.Error = orbitEx.Message;
-                    _deps.Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
+                    _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
                         mapping.Error);
                     stats.Failed++;
                 }
                 catch (Exception ex)
                 {
-                    _deps.Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
+                    _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
                     mapping.Error = ex.ToString();
                     stats.Failed++;
                 }
 
-                _deps.LogDb.Mappings.Add(mapping);
+                _logDb.Mappings.Add(mapping);
             }
-            await _deps.LogDb.SaveChangesAsync();
+            await _logDb.SaveChangesAsync();
         }
     }
 }

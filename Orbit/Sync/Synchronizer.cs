@@ -1,29 +1,11 @@
+using System;
 using System.Threading.Tasks;
 using JsonApi;
-using Orbit.Api;
-using PlanningCenter.Api;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace Sync
 {
-    public class SyncDependencies
-    {
-        public PlanningCenterClient PeopleClient { get; }
-        public LogDbContext LogDb { get; }
-        public OrbitApiClient OrbitClient { get; }
-        public string WorkspaceSlug { get; }
-        public ILogger Log { get; }
-
-        public SyncDependencies(PlanningCenterClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, string workspaceSlug, ILogger log)
-        {
-            PeopleClient = peopleClient;
-            LogDb = logDb;
-            OrbitClient = orbitClient;
-            WorkspaceSlug = workspaceSlug;
-            Log = log;
-        }
-    }
-
     interface ISync
     {
         string From { get; }
@@ -37,18 +19,18 @@ namespace Sync
     public class Synchronizer
     {
         private readonly ILogger _log;
-        private readonly SyncDependencies _deps;
+        private readonly IServiceProvider _services;
 
 
-        public Synchronizer(ILogger log, SyncDependencies deps)
+        public Synchronizer(ILogger log, IServiceProvider services)
         {
             _log = log;
-            _deps = deps;
+            _services = services;
         }
         
         public async Task PeopleToMembers()
         {
-            var impl = new PeopleToMembersSync(_deps);
+            var impl = _services.GetRequiredService<PeopleToMembersSync>();
             await Sync(impl);
         }
         
@@ -82,6 +64,12 @@ namespace Sync
                     stats.Failed, stats.RecordsPerSecond);
             }
             _log.Information("Sync complete");
+        }
+
+        public async Task CheckInsToActivities()
+        {
+            var impl = _services.GetRequiredService<CheckInsToActivitiesSync>();
+            await Sync(impl);
         }
     }
 }

@@ -5,15 +5,55 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using JsonApi;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
 namespace PlanningCenter.Api
 {
-    public static class Constants
+    public static class ServiceCollectionExtensions
     {
-        public const string CheckInsPrefix = "check-ins";
-        public const string PeoplePrefix = "people";
+        public static IServiceCollection AddPlanningCenter(this IServiceCollection services,
+            string? applicationId = null, string? secret = null)
+        {
+            applicationId ??= Environment.GetEnvironmentVariable("PCO_APPLICATION_ID");
+            secret ??= Environment.GetEnvironmentVariable("PCO_SECRET");
+
+            var headerValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{applicationId}:{secret}"));
+            var header = new AuthenticationHeaderValue("Basic", headerValue);
+
+            Action<HttpClient> ConfigureClient(string apiPrefix)
+            {
+                return (client) =>
+                {
+                    client.BaseAddress = new Uri($"https://api.planningcenteronline.com/{PeopleClient.ApiPrefix}/v2/");
+                    client.DefaultRequestHeaders.Authorization = header;
+                };
+            }
+            
+            services.AddHttpClient<PeopleClient>(ConfigureClient(PeopleClient.ApiPrefix));
+            services.AddHttpClient<CheckInsClient>(ConfigureClient(CheckInsClient.ApiPrefix));
+            return services;
+        }
+    }
+
+    
+    public class CheckInsClient : PlanningCenterClient
+    {
+        public const string ApiPrefix = "check-ins";
+
+        public CheckInsClient(HttpClient httpClient) : base(httpClient)
+        {
+        }
+    }
+    
+    public class PeopleClient : PlanningCenterClient
+    {
+        public const string ApiPrefix = "people";
+
+        public PeopleClient(HttpClient httpClient) : base(httpClient)
+        {
+        }
     }
 
     public class PlanningCenterClient
@@ -21,21 +61,9 @@ namespace PlanningCenter.Api
         private readonly JsonSerializerSettings _jsonSettings;
         public HttpClient HttpClient { get; }
 
-        public static PlanningCenterClient Create(string apiPrefix, string? applicationId = null, string? secret = null)
-        {
-            applicationId ??= Environment.GetEnvironmentVariable("PCO_APPLICATION_ID"); 
-            secret ??= Environment.GetEnvironmentVariable("PCO_SECRET");
-
-            var headerValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{applicationId}:{secret}"));
-            var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", headerValue);
-            return new PlanningCenterClient(client, apiPrefix);
-        }
-        public PlanningCenterClient(HttpClient httpClient, string apiPrefix)
+        public PlanningCenterClient(HttpClient httpClient)
         {
             HttpClient = httpClient;
-            HttpClient.BaseAddress = new Uri($"https://api.planningcenteronline.com/{apiPrefix}/v2/");
             _jsonSettings = new JsonSerializerSettings()
             {
                 ContractResolver = new DefaultContractResolver()
