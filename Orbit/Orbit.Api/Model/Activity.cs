@@ -26,6 +26,7 @@ namespace Orbit.Api.Model
     [DataContract]
         public partial class Activity :  IEquatable<Activity>
     {
+        public string Id { get; set; }
         /// <summary>
         /// Initializes a new instance of the <see cref="Activity" /> class.
         /// </summary>

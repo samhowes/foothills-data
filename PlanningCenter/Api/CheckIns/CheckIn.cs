@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using JsonApi;
+using JsonApiSerializer.JsonApi;
+
 namespace PlanningCenter.Api.CheckIns
 {
     public class CheckIn : EntityBase
@@ -17,5 +21,7 @@ namespace PlanningCenter.Api.CheckIns
         public EventPeriod EventPeriod { get; set; }
         public string PersonId { get; set; }
         public Person Person { get; set; }
+        
+        public Relationship<List<EventTime>> EventTimes { get; set; }
     }
 }

@@ -1,10 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using JsonApi;
+using System.Web;
+using JsonApiSerializer;
+using JsonApiSerializer.ContractResolvers;
+using JsonApiSerializer.JsonApi;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -26,7 +29,7 @@ namespace PlanningCenter.Api
             {
                 return (client) =>
                 {
-                    client.BaseAddress = new Uri($"https://api.planningcenteronline.com/{PeopleClient.ApiPrefix}/v2/");
+                    client.BaseAddress = new Uri($"https://api.planningcenteronline.com/{apiPrefix}/v2/");
                     client.DefaultRequestHeaders.Authorization = header;
                 };
             }
@@ -58,30 +61,60 @@ namespace PlanningCenter.Api
 
     public class PlanningCenterClient
     {
-        private readonly JsonSerializerSettings _jsonSettings;
+        public readonly JsonSerializerSettings _jsonSettings;
         public HttpClient HttpClient { get; }
 
         public PlanningCenterClient(HttpClient httpClient)
         {
             HttpClient = httpClient;
-            _jsonSettings = new JsonSerializerSettings()
-            {
-                ContractResolver = new DefaultContractResolver()
-                {
-                    NamingStrategy = new SnakeCaseNamingStrategy()
-                }
-            };
+            _jsonSettings = new JsonApiSerializerSettings();
+            ((JsonApiContractResolver) _jsonSettings.ContractResolver!).NamingStrategy = new SnakeCaseNamingStrategy();
         }
-
-        public Task<Response<List<Resource<Dictionary<string, string>>>>> GetGenericAsync(string url)
-            => GetAsync<Dictionary<string, string>>(url);
-
-        public async Task<Response<List<Resource<T>>>> GetAsync<T>(string url)
+        
+        public async Task<DocumentRoot<T>> GetAsync<T>(string url, params (string key, string value)[] parameters)
         {
+            if (parameters.Length > 0)
+            {
+                var query = string.Join("&",
+                    parameters.Select(p => $"{HttpUtility.UrlEncode(p.key)}={HttpUtility.UrlEncode(p.value)}"));
+                url += "?" + query;
+            }
             var response = await HttpClient.GetAsync(url);
-            var body = await response.Content.ReadAsStringAsync();
-            var typed = JsonConvert.DeserializeObject<Response<List<Resource<T>>>>(body, _jsonSettings)!;
+
+            var typed = await ReadResponse<DocumentRoot<T>>(response);
             return typed;
+        }
+        
+        private async Task<T> ReadResponse<T>(HttpResponseMessage response)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new PlanningCenterException($"Http failure for {response.RequestMessage!.RequestUri}: {body}");
+            }
+            
+            var typed = JsonConvert.DeserializeObject<T>(body, _jsonSettings)!;
+            return typed;
+        }
+        
+        // public async Task<List<Resource<T>>> GetAllAsync<T>(string url, params (string key, string value)[] parameters)
+        // {
+        //     var current = await GetAsync<T>(url, parameters);
+        //     var data = current.Data;
+        //     while (!string.IsNullOrEmpty(current.Links.Next))
+        //     {
+        //         current = await GetAsync<T>(current.Links.Next);
+        //         data.AddRange(current.Data);
+        //     }
+        //
+        //     return data;
+        // }
+    }
+    
+    public class PlanningCenterException : Exception
+    {
+        public PlanningCenterException(string message) : base(message)
+        {
         }
     }
 }

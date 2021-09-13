@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JsonApi;
+using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Orbit.Api;
 using Orbit.Api.Model;
@@ -11,6 +13,11 @@ using Serilog;
 
 namespace Sync
 {
+    public static class Constants
+    {
+        public const string PlanningCenterSource = "planningcenter";
+    }
+    
     public class PeopleToMembersSync : ISync
     {
         private readonly PeopleClient _peopleClient;
@@ -18,7 +25,7 @@ namespace Sync
         private readonly OrbitApiClient _orbitClient;
         private readonly ILogger _log;
         private Dictionary<string,Mapping> _existing;
-        private Response<List<Resource<Person>>> _people;
+        private DocumentRoot<List<Person>> _people;
         
         public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, ILogger log)
         {
@@ -31,18 +38,20 @@ namespace Sync
         public string From => "People";
         public string To => "Members";
 
-        public async Task<Response> GetInitialDataAsync()
+        public async Task<(Meta Meta, Links Links)> GetInitialDataAsync()
         {
-            _people = await _peopleClient.GetAsync<Person>("people");
-            _existing = await _logDb.Mappings.ToDictionaryAsync(m => m.PlanningCenterId);
-            return _people;
+            _people = await _peopleClient.GetAsync<List<Person>>("people");
+            _existing = await _logDb.Mappings
+                .Where(m => m.Type == nameof(Person))
+                .ToDictionaryAsync(m => m.PlanningCenterId);
+            return (_people.Meta, _people.Links);
         }
 
         public async Task<bool> GetNextBatchAsync()
         {
-            if (string.IsNullOrEmpty(_people.Links.Prev)) return true;
-            if (string.IsNullOrEmpty(_people.Links.Next)) return false;
-            _people = await _peopleClient.GetAsync<Person>(_people.Links.Next);
+            if (string.IsNullOrEmpty(_people.Links.Prev())) return true;
+            if (string.IsNullOrEmpty(_people.Links.Next())) return false;
+            _people = await _peopleClient.GetAsync<List<Person>>(_people.Links.Next());
             return true;
         }
 
@@ -61,21 +70,21 @@ namespace Sync
                     PlanningCenterId = person.Id,
                 };
                 var tags = new List<string>();
-                if (person.Attributes.Child == "true")
+                if (person.Child == "true")
                     tags.Add("child");
 
                 var member = new UpsertMember()
                 {
-                    Birthday = person.Attributes.Birthdate,
-                    Name = person.Attributes.Name,
+                    Birthday = person.Birthdate,
+                    Name = person.Name,
                     Slug = person.Id,
                     TagsToAdd = string.Join(",", tags),
-                    Identity = new Identity(source: "planningcenter")
+                    Identity = new Identity(source: Constants.PlanningCenterSource)
                     {
                         Email = $"{person.Id}@foothillsuu.org",
-                        Name = person.Attributes.Name,
+                        Name = person.Name,
                         Uid = person.Id,
-                        Url = person.Links.Self,
+                        Url = person.Links.Self()!,
                     }
                 };
 

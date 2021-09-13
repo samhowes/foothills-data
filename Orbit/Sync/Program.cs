@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Api;
-using Orbit.Api.Model;
 using PlanningCenter.Api;
 using Serilog;
 
@@ -13,16 +12,17 @@ namespace Sync
     {
         static async Task Main(string[] args)
         {
+            var workspaceSlug = "sam-workspace";
             var services = new ServiceCollection();
-            services.AddPlanningCenter();
-            
+            services
+                .AddPlanningCenter()
+                .AddOrbitApi(workspaceSlug);
+
             var log = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateLogger();
             services.AddSingleton<ILogger>(log);
             services.AddSingleton(await GetLog());
-            
-            var workspaceSlug = "sam-workspace";
 
             services.AddSingleton<Synchronizer>();
             services.AddTransient<PeopleToMembersSync>();
