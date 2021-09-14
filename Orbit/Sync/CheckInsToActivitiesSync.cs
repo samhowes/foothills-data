@@ -54,28 +54,6 @@ namespace Sync
             }
             
             _worship = worships.Data.Single();
-            //
-            // var eventPeriods = await _checkInsClient.GetAsync<EventPeriod>(
-            //     worship.Links.Self + "/event_periods", 
-            //     ("order", "-starts_at"));
-            //
-            // var builder = new StringBuilder().AppendLine();
-            // foreach (var period in eventPeriods.Data)
-            // {
-            //     builder.AppendLine($"----- {period.Attributes.StartsAt}");
-            //     var times = await _checkInsClient.GetAsync<EventTime>(period.Links.Self + "/event_times");
-            //
-            //     foreach (var time in times.Data.OrderBy(e => e.Attributes.StartsAt))
-            //     {
-            //         builder.AppendLine($"{time.Attributes.Name}:\t\t {time.Attributes.ShowsAt} => {time.Attributes.StartsAt} => {time.Attributes.HidesAt}");
-            //         var checkIns = await _checkInsClient.GetAsync<CheckIn>(
-            //             time.Links.Self + "/check_ins");
-            //         builder.AppendLine($"\tCheckIn count: {checkIns.Meta.TotalCount}");
-            //     }    
-            // }
-            //
-            //
-            // _log.Information(builder.ToString());
 
             if (nextUrl != null)
             {
@@ -145,7 +123,6 @@ namespace Sync
                             LinkText = "CheckIn",
                             ActivityType = "Online Worship Attendance",
                             OccurredAt = checkIn.CreatedAt,
-                            Description = "Important Description from CheckIn",
                             Tags = new List<string>()
                             {
                                 "channel:Worship"
