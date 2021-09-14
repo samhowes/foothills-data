@@ -24,8 +24,8 @@ namespace Sync
         private readonly LogDbContext _logDb;
         private readonly OrbitApiClient _orbitClient;
         private readonly ILogger _log;
-        private Dictionary<string,Mapping> _existing;
-        private DocumentRoot<List<Person>> _people;
+        private Dictionary<string,Mapping> _existing = null!;
+        private DocumentRoot<List<Person>> _people = null!;
         
         public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, ILogger log)
         {
@@ -38,30 +38,29 @@ namespace Sync
         public string From => "People";
         public string To => "Members";
 
-        public async Task<(Meta Meta, Links Links)> GetInitialDataAsync()
+        public async Task<BatchInfo> GetInitialDataAsync(string? nextUrl)
         {
-            _people = await _peopleClient.GetAsync<List<Person>>("people");
+            _people = await _peopleClient.GetAsync<List<Person>>(nextUrl ?? "people");
             _existing = await _logDb.Mappings
                 .Where(m => m.Type == nameof(Person))
                 .ToDictionaryAsync(m => m.PlanningCenterId);
-            return (_people.Meta, _people.Links);
+            return new BatchInfo(_people.Links.Self(), _people.Meta, _people.Links);
         }
 
-        public async Task<bool> GetNextBatchAsync()
+        public async Task<string?> GetNextBatchAsync()
         {
-            if (string.IsNullOrEmpty(_people.Links.Prev())) return true;
-            if (string.IsNullOrEmpty(_people.Links.Next())) return false;
-            _people = await _peopleClient.GetAsync<List<Person>>(_people.Links.Next());
-            return true;
+            if (string.IsNullOrEmpty(_people.Links.Next())) return null;
+            _people = await _peopleClient.GetAsync<List<Person>>(_people.Links.Next()!);
+            return _people.Links.Self();
         }
 
-        public async Task ProcessBatchAsync(Stats stats)
+        public async Task ProcessBatchAsync(Progress progress)
         {
             foreach (var person in _people.Data)
             {
                 if (_existing.TryGetValue(person.Id, out var mapping))
                 {
-                    stats.Skipped++;
+                    progress.Skipped++;
                     continue;
                 }
 
@@ -92,20 +91,20 @@ namespace Sync
                 {
                     var created = await _orbitClient.PostAsync<Member>("members", member);
                     mapping.OrbitId = created.Data.Id;
-                    stats.Success++;
+                    progress.Success++;
                 }
                 catch (OrbitApiException orbitEx)
                 {
                     mapping.Error = orbitEx.Message;
                     _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
                         mapping.Error);
-                    stats.Failed++;
+                    progress.Failed++;
                 }
                 catch (Exception ex)
                 {
                     _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
                     mapping.Error = ex.ToString();
-                    stats.Failed++;
+                    progress.Failed++;
                 }
 
                 _logDb.Mappings.Add(mapping);

@@ -27,6 +27,7 @@ namespace Orbit.Api.Model
     [DataContract]
         public partial class Member :  IEquatable<Member>
     {
+        public string Id { get; set; }
         /// <summary>
         /// Initializes a new instance of the <see cref="Member" /> class.
         /// </summary>

@@ -12,7 +12,6 @@ namespace PlanningCenter.Api.CheckIns
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public string Name { get; set; }
-        public string EventId { get; set; }
         public Event Event { get; set; }
         public string EventPeriodId { get; set; }
         public EventPeriod EventPeriod { get; set; }

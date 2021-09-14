@@ -1,32 +1,39 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace Sync
 {
+    public record BatchInfo(string Url, Meta Meta, Links Links);
+    
     interface ISync
     {
         string From { get; }
         string To { get; }
 
-        Task<(Meta Meta, Links Links)> GetInitialDataAsync();
-        Task ProcessBatchAsync(Stats stats);
-        Task<bool> GetNextBatchAsync();
+        Task<BatchInfo> GetInitialDataAsync(string? nextUrl);
+        Task ProcessBatchAsync(Progress progress);
+        Task<string?> GetNextBatchAsync();
     }
 
     public class Synchronizer
     {
         private readonly ILogger _log;
         private readonly IServiceProvider _services;
+        private readonly LogDbContext _logDb;
 
 
-        public Synchronizer(ILogger log, IServiceProvider services)
+        public Synchronizer(ILogger log, IServiceProvider services, LogDbContext logDb)
         {
             _log = log;
             _services = services;
+            _logDb = logDb;
         }
 
         public async Task PeopleToMembers()
@@ -38,31 +45,61 @@ namespace Sync
         private async Task Sync(ISync impl)
         {
             _log.Information("Starting sync from {SyncFrom} to {SyncTo}", impl.From, impl.To);
-            using var stats = new Stats();
-            var initialData = await impl.GetInitialDataAsync();
+            var name = impl.GetType().Name;
+            var progress = await _logDb.Progress.SingleOrDefaultAsync(p => p.Type == name);
 
+            if (progress != null)
+            {
+                _log.Information("Resuming sync at url {Url}", progress.NextUrl);
+            }
+            else
+            {
+                _log.Information("Starting new sync");
+            }
+            
+            var initialData = await impl.GetInitialDataAsync(progress?.NextUrl);
+
+            if (progress == null)
+            {
+                progress = new Progress()
+                {
+                    Type = name,
+                    NextUrl = initialData.Url
+                };
+                _logDb.Progress.Add(progress);
+                await _logDb.SaveChangesAsync();
+            }
+            
             _log.Information("Found {QueueCount} {EntityType} to sync: {Url}",
                 initialData.Meta.TotalCount(), impl.From, initialData.Links.Self());
             _log.Information("Using batch size of {BatchSize} for {PageCount} pages",
-                initialData.Meta.Count, initialData.Meta.PageCount());
+                initialData.Meta.Count(), initialData.Meta.PageCount());
 
-            for (;;)
+            using (progress)
             {
-                using var batchStats = new Stats();
-                var hasMore = await impl.GetNextBatchAsync();
-                if (!hasMore) break;
+                progress.Timer.Start();
+                for (;;)
+                {
+                    using var batchStats = new Progress();
 
-                await impl.ProcessBatchAsync(batchStats);
-                _log.Information(
-                    "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
-                    batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
+                    await impl.ProcessBatchAsync(batchStats);
+                    _log.Information(
+                        "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
+                        batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
 
-                stats.Accumulate(batchStats);
-                _log.Information(
-                    "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
-                    "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
-                    stats.SecondsElapsed, stats.Total, initialData.Meta.TotalCount(), stats.Success, stats.Skipped,
-                    stats.Failed, stats.RecordsPerSecond);
+                    progress.Accumulate(batchStats);
+                    _log.Information(
+                        "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
+                        "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
+                        progress.SecondsElapsed, progress.Total, initialData.Meta.TotalCount(), progress.Success, progress.Skipped,
+                        progress.Failed, progress.RecordsPerSecond);
+
+                    progress.NextUrl = await impl.GetNextBatchAsync();
+                    progress.TotalTime += progress.Timer.ElapsedMilliseconds;
+                    
+                    await _logDb.SaveChangesAsync();
+                    if (progress.NextUrl == null) break;
+                }
             }
 
             _log.Information("Sync complete");

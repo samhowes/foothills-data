@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,16 +14,20 @@ namespace Sync
         static async Task Main(string[] args)
         {
             var workspaceSlug = "sam-workspace";
+            var root = FindRoot();
             var services = new ServiceCollection();
             services
                 .AddPlanningCenter()
                 .AddOrbitApi(workspaceSlug);
 
             var log = new LoggerConfiguration()
+                .MinimumLevel.Debug()
                 .WriteTo.Console()
+                .WriteTo.File(Path.Combine(root, "sync.log"))
                 .CreateLogger();
             services.AddSingleton<ILogger>(log);
-            services.AddSingleton(await GetLog());
+            var db = await GetLog(root);
+            services.AddSingleton(db);
 
             services.AddSingleton<Synchronizer>();
             services.AddTransient<PeopleToMembersSync>();
@@ -32,15 +37,30 @@ namespace Sync
             var sync = provider.GetRequiredService<Synchronizer>();
 
             log.Information("Starting sync to workspace {WorkspaceSlug}...", workspaceSlug);
-            // await sync.PeopleToMembers();
-            await sync.CheckInsToActivities();
+            try
+            {
+                // await sync.PeopleToMembers();
+                await sync.CheckInsToActivities();
+            }
+            catch (Exception e)
+            {
+                log.Fatal(e, "Unexpected error while performing sync");
+            }
+
+            await db.SaveChangesAsync();
         }
 
-        private static async Task<LogDbContext> GetLog()
+        private static string FindRoot()
         {
             var root = Directory.GetCurrentDirectory();
             while (!Directory.Exists(Path.Combine(root!, ".git")))
                 root = Path.GetDirectoryName(root)!;
+            return root;
+        }
+        
+        private static async Task<LogDbContext> GetLog(string root)
+        {
+            
             var dbPath = Path.Combine(root, "log.db");
 
             var log = new LogDbContext(new DbContextOptionsBuilder<LogDbContext>()
