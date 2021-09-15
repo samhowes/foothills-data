@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -30,16 +31,26 @@ namespace Sync
             services.AddSingleton(db);
 
             services.AddSingleton<Synchronizer>();
+            services.AddSingleton<DataCache>();
             services.AddTransient<PeopleToMembersSync>();
             services.AddTransient<CheckInsToActivitiesSync>();
+            services.AddTransient<DonationsToActivitiesSync>();
 
-            services.AddSingleton(new SyncConfig(10000));
+            services.AddSingleton(new SyncConfig(0));
             
             // todo(#15) remove this config
             services.AddSingleton(new CheckInsToActivitiesSyncConfig());
             services.AddSingleton(new CheckInsToActivitiesSyncConfig(
-                Mode: SyncMode.Update,
-                Params: ("order", "-created_at")));
+                mode: SyncMode.Update,
+                @params: ("order", "-created_at")));
+
+            services.AddSingleton(new DonationsConfig()
+            {
+                ExcludedFundIds = new HashSet<string>(new[]
+                {
+                    "34038", "207309", "63896", "181654", "178986", "158390", "156026", "64218", "146161"
+                })
+            });
 
             var provider = services.BuildServiceProvider();
             var sync = provider.GetRequiredService<Synchronizer>();
@@ -48,7 +59,8 @@ namespace Sync
             try
             {
                 // await sync.PeopleToMembers();
-                await sync.CheckInsToActivities();
+                // await sync.CheckInsToActivities();
+                await sync.DonationsToActivities();
             }
             catch (Exception e)
             {
@@ -79,5 +91,11 @@ namespace Sync
         }
     }
 
-    
+    public record DonationsConfig : SyncImplConfig
+    {
+        public DonationsConfig(SyncMode mode = SyncMode.Create) : base(mode)
+        {
+        }
+        public HashSet<string>? ExcludedFundIds { get; init; }
+    }
 }

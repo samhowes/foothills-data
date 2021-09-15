@@ -34,6 +34,7 @@ namespace PlanningCenter.Api
             
             services.AddHttpClient<PeopleClient>(ConfigureClient(PeopleClient.ApiPrefix));
             services.AddHttpClient<CheckInsClient>(ConfigureClient(CheckInsClient.ApiPrefix));
+            services.AddHttpClient<GivingClient>(ConfigureClient(GivingClient.ApiPrefix));
             return services;
         }
     }
@@ -53,6 +54,15 @@ namespace PlanningCenter.Api
         public const string ApiPrefix = "people";
 
         public PeopleClient(HttpClient httpClient, ILogger log) : base(httpClient, log)
+        {
+        }
+    }
+    
+    public class GivingClient : PlanningCenterClient
+    {
+        public const string ApiPrefix = "giving";
+
+        public GivingClient(HttpClient httpClient, ILogger log) : base(httpClient, log)
         {
         }
     }

@@ -75,5 +75,12 @@ namespace Orbit.Api
 
             return await ReadResponse<DocumentRoot<T>>(response);
         }
+
+        public record AddActivity(UploadActivity Activity, Identity Identity);
+        public async Task CreateActivity(UploadActivity uploadActivity, Identity identity)
+        {
+            var created = await PostAsync<DocumentRoot<UploadActivity>>("activities", 
+                new AddActivity(uploadActivity, identity));
+        }
     }
 }

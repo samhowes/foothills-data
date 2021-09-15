@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PlanningCenter.Api;
 using Serilog;
 
 namespace Sync
@@ -11,16 +13,6 @@ namespace Sync
     public record SyncConfig(long MaxCount);
     public record BatchInfo(string Url, Meta Meta, Links Links);
     
-    interface ISync
-    {
-        string From { get; }
-        string To { get; }
-
-        Task<BatchInfo> GetInitialDataAsync(string? nextUrl);
-        Task ProcessBatchAsync(Progress progress);
-        Task<string?> GetNextBatchAsync();
-    }
-
     public class Synchronizer
     {
         private readonly ILogger _log;
@@ -42,8 +34,20 @@ namespace Sync
             var impl = _services.GetRequiredService<PeopleToMembersSync>();
             await Sync(impl);
         }
+        
+        public async Task CheckInsToActivities()
+        {
+            var impl = _services.GetRequiredService<CheckInsToActivitiesSync>();
+            await Sync(impl);
+        }
 
-        private async Task Sync(ISync impl)
+        public async Task DonationsToActivities()
+        {
+            var impl = _services.GetRequiredService<DonationsToActivitiesSync>();
+            await Sync(impl);
+        }
+
+        private async Task Sync<TSource>(Sync<TSource> impl) where TSource : EntityBase
         {
             _log.Information("Starting sync from {SyncFrom} to {SyncTo}", impl.From, impl.To);
             var name = impl.GetType().Name;
@@ -58,65 +62,81 @@ namespace Sync
                 _log.Information("Starting new sync");
             }
             
-            var initialData = await impl.GetInitialDataAsync(progress?.NextUrl);
+            var batch = await impl.GetInitialDataAsync(progress?.NextUrl);
 
             if (progress == null)
             {
                 progress = new Progress()
                 {
                     Type = name,
-                    NextUrl = initialData.Url
+                    NextUrl = batch.Links.Self()
                 };
                 _logDb.Progress.Add(progress);
                 await _logDb.SaveChangesAsync();
             }
             
             _log.Information("Found {QueueCount} {EntityType} to sync: {Url}",
-                initialData.Meta.TotalCount(), impl.From, initialData.Links.Self());
+                batch.Meta.TotalCount(), impl.From, batch.Links.Self());
             _log.Information("Using batch size of {BatchSize} for {PageCount} pages",
-                initialData.Meta.Count(), initialData.Meta.PageCount());
+                batch.Meta.Count(), batch.Meta.PageCount());
 
             using (progress)
             {
                 progress.Timer.Start();
-                for (;;)
-                {
-                    using var batchStats = new Progress();
-
-                    await impl.ProcessBatchAsync(batchStats);
-                    _log.Information(
-                        "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
-                        batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
-
-                    progress.Accumulate(batchStats);
-                    _log.Information(
-                        "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
-                        "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
-                        progress.SecondsElapsed, progress.Total, initialData.Meta.TotalCount(), progress.Success, progress.Skipped,
-                        progress.Failed, progress.RecordsPerSecond);
-
-                    progress.NextUrl = await impl.GetNextBatchAsync();
-                    progress.TotalTime += progress.Timer.ElapsedMilliseconds;
-                    
-                    await _logDb.SaveChangesAsync();
-
-                    if (_config.MaxCount > 0 && progress.Success > _config.MaxCount)
-                    {
-                        _log.Information("MaxCount of {MaxCount} exceeded with {SuccessCount}", 
-                            _config.MaxCount, progress.Success);
-                        break;
-                    }
-                    if (progress.NextUrl == null) break;
-                }
+                await ProcessAllBatchesAsync(impl, batch, progress);
             }
-
-            _log.Information("Sync complete");
+            _log.Information("Sync complete in {TotalTime}", progress.Timer.Elapsed);
         }
 
-        public async Task CheckInsToActivities()
+        private async Task ProcessAllBatchesAsync<TSource>(Sync<TSource> impl, DocumentRoot<List<TSource>> batch, Progress progress)
+            where TSource : EntityBase
         {
-            var impl = _services.GetRequiredService<CheckInsToActivitiesSync>();
-            await Sync(impl);
+            for (;;)
+            {
+                using var batchStats = new Progress();
+                batchStats.Timer.Start();
+
+                foreach (var item in batch.Data)
+                {
+                    await impl.ProcessBatchAsync(batchStats, item);
+
+                    Report(impl, batchStats, progress, batch);
+                }
+
+                progress.TotalTime += progress.Timer.ElapsedMilliseconds;
+
+                await _logDb.SaveChangesAsync();
+                if (_config.MaxCount > 0 && progress.Success >= _config.MaxCount)
+                {
+                    _log.Information("MaxCount of {MaxCount} exceeded with {SuccessCount}",
+                        _config.MaxCount, progress.Success);
+                    break;
+                }
+
+                var nextUrl = batch.Links.Next();
+                if (string.IsNullOrEmpty(nextUrl)) break;
+
+                batch = await impl.PlanningCenterClient.GetAsync<List<TSource>>(nextUrl);
+
+                progress.NextUrl = nextUrl;
+                await _logDb.SaveChangesAsync();
+            }
+        }
+
+        private void Report<TSource>(Sync<TSource> impl, Progress batchStats, Progress progress, DocumentRoot<List<TSource>> batch)
+            where TSource : EntityBase
+        {
+            _log.Information(
+                "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
+                batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
+
+            progress.Accumulate(batchStats);
+            _log.Information(
+                "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
+                "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
+                progress.SecondsElapsed, progress.Total, batch.Meta.TotalCount(), progress.Success,
+                progress.Skipped,
+                progress.Failed, progress.RecordsPerSecond);
         }
     }
 }

@@ -29,8 +29,8 @@ namespace Sync
             
         }
 
-        public DbSet<Mapping> Mappings { get; set; }    
-        public DbSet<Progress> Progress { get; set; }    
-        public DbSet<Blob> Blobs { get; set; }
+        public DbSet<Mapping> Mappings { get; set; } = null!;
+        public DbSet<Progress> Progress { get; set; } = null!;
+        public DbSet<Blob> Blobs { get; set; } = null!;
     }
 }

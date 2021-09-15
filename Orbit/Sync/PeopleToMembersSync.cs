@@ -18,7 +18,7 @@ namespace Sync
         public const string PlanningCenterSource = "planningcenter";
     }
     
-    public class PeopleToMembersSync : ISync
+    public class PeopleToMembersSync : Sync<Person>
     {
         private readonly PeopleClient _peopleClient;
         private readonly LogDbContext _logDb;
@@ -27,7 +27,9 @@ namespace Sync
         private Dictionary<string,Mapping> _existing = null!;
         private DocumentRoot<List<Person>> _people = null!;
         
-        public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient, ILogger log)
+        public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient,
+            ILogger log, DataCache cache)
+            : base(new SyncImplConfig(), orbitClient, cache, log, logDb, peopleClient)
         {
             _peopleClient = peopleClient;
             _logDb = logDb;
@@ -35,81 +37,70 @@ namespace Sync
             _log = log;
         }
 
-        public string From => "People";
-        public string To => "Members";
+        public override string From => "People";
+        public override string To => "Members";
 
-        public async Task<BatchInfo> GetInitialDataAsync(string? nextUrl)
+        public override async Task<DocumentRoot<List<Person>>> GetInitialDataAsync(string? nextUrl)
         {
             _people = await _peopleClient.GetAsync<List<Person>>(nextUrl ?? "people");
             _existing = await _logDb.Mappings
                 .Where(m => m.Type == nameof(Person))
-                .ToDictionaryAsync(m => m.PlanningCenterId);
-            return new BatchInfo(_people.Links.Self(), _people.Meta, _people.Links);
+                .ToDictionaryAsync(m => m.PlanningCenterId!);
+            return _people;
         }
 
-        public async Task<string?> GetNextBatchAsync()
+        public override async Task ProcessBatchAsync(Progress progress, Person person)
         {
-            if (string.IsNullOrEmpty(_people.Links.Next())) return null;
-            _people = await _peopleClient.GetAsync<List<Person>>(_people.Links.Next()!);
-            return _people.Links.Self();
-        }
-
-        public async Task ProcessBatchAsync(Progress progress)
-        {
-            foreach (var person in _people.Data)
+            if (_existing.TryGetValue(person.Id, out var mapping))
             {
-                if (_existing.TryGetValue(person.Id, out var mapping))
-                {
-                    progress.Skipped++;
-                    continue;
-                }
-
-                mapping = new Mapping()
-                {
-                    PlanningCenterId = person.Id,
-                };
-                var tags = new List<string>();
-                if (person.Child == "true")
-                    tags.Add("child");
-
-                var member = new UpsertMember()
-                {
-                    Birthday = person.Birthdate,
-                    Name = person.Name,
-                    Slug = person.Id,
-                    TagsToAdd = string.Join(",", tags),
-                    Identity = new Identity(source: Constants.PlanningCenterSource)
-                    {
-                        Email = $"{person.Id}@foothillsuu.org",
-                        Name = person.Name,
-                        Uid = person.Id,
-                        Url = person.Links.Self()!,
-                    }
-                };
-
-                try
-                {
-                    var created = await _orbitClient.PostAsync<Member>("members", member);
-                    mapping.OrbitId = created.Data.Id;
-                    progress.Success++;
-                }
-                catch (ApiException orbitEx)
-                {
-                    mapping.Error = orbitEx.Message;
-                    _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
-                        mapping.Error);
-                    progress.Failed++;
-                }
-                catch (Exception ex)
-                {
-                    _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
-                    mapping.Error = ex.ToString();
-                    progress.Failed++;
-                }
-
-                _logDb.Mappings.Add(mapping);
+                progress.Skipped++;
+                return;
             }
-            await _logDb.SaveChangesAsync();
+
+            mapping = new Mapping()
+            {
+                PlanningCenterId = person.Id,
+            };
+            var tags = new List<string>();
+            if (person.Child == "true")
+                tags.Add("child");
+
+            var member = new UpsertMember()
+            {
+                Birthday = person.Birthdate,
+                Name = person.Name,
+                Slug = person.Id,
+                TagsToAdd = string.Join(",", tags),
+                Identity = new Identity(source: Constants.PlanningCenterSource)
+                {
+                    Email = $"{person.Id}@foothillsuu.org",
+                    Name = person.Name,
+                    Uid = person.Id,
+                    Url = person.Links.Self()!,
+                }
+            };
+
+            try
+            {
+                var created = await _orbitClient.PostAsync<Member>("members", member);
+                mapping.OrbitId = created.Data.Id;
+                progress.Success++;
+            }
+            catch (ApiException orbitEx)
+            {
+                mapping.Error = orbitEx.Message;
+                _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
+                    mapping.Error);
+                progress.Failed++;
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
+                mapping.Error = ex.ToString();
+                progress.Failed++;
+            }
+
+            _logDb.Mappings.Add(mapping);
         }
     }
 }
