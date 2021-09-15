@@ -3,10 +3,12 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Orbit.Api.Model;
 using Polly;
 using Serilog;
 
@@ -27,56 +29,35 @@ namespace Orbit.Api
             return services;
         }
     }
-
-    public class OrbitApiClient
+    
+    
+    public class OrbitApiClient : ApiClientBase
     {
-        private readonly HttpClient _httpClient;
-        private readonly JsonSerializerSettings _jsonSettings;
-        private ILogger _log;
-
-
-        public OrbitApiClient(HttpClient httpClient, ILogger log)
+        public OrbitApiClient(HttpClient httpClient, ILogger log) : base(log, httpClient)
         {
-            _httpClient = httpClient;
-            _log = log;
-            _jsonSettings = new JsonSerializerSettings()
-            {
-                ContractResolver = new DefaultContractResolver()
-                {
-                    NamingStrategy = new SnakeCaseNamingStrategy()
-                }
-            };
         }
-
-        public async Task<DocumentRoot<T>> GetAsync<T>(string url)
-        {
-            var response = await _httpClient.GetAsync(url);
-            return await ReadResponse<T>(response);
-        }
-
-        private async Task<DocumentRoot<T>> ReadResponse<T>(HttpResponseMessage response)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new OrbitApiException($"Http failure for {response.RequestMessage!.RequestUri}: {body}");
-            }
-
-            var typed = JsonConvert.DeserializeObject<DocumentRoot<T>>(body, _jsonSettings)!;
-            return typed;
-        }
-
+        
         public async Task<DocumentRoot<T>> PostAsync<T>(string url, object data)
         {
-            var body = JsonConvert.SerializeObject(data, _jsonSettings);
-            
+            return await UploadAsync<T>(url, data, HttpMethod.Post);
+        }
+        
+        public async Task<DocumentRoot<T>> PutAsync<T>(string url, object data)
+        {
+            return await UploadAsync<T>(url, data, HttpMethod.Put);
+        }
+
+        private async Task<DocumentRoot<T>> UploadAsync<T>(string url, object data, HttpMethod? method)
+        {
+            var body = JsonConvert.SerializeObject(data, WriteJsonSettings);
+
             var response = await Policy
                 .HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.TooManyRequests)
                 .WaitAndRetryAsync(5, retryAttempt =>
                     {
                         var waitTime = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)); // exponential backoff  
-                        
-                        _log.Information("{ApiName} Got {HttpStatusCode}, waiting to retry for {WaitTime} seconds",
+
+                        Log.Information("{ApiName} Got {HttpStatusCode}, waiting to retry for {WaitTime} seconds",
                             nameof(OrbitApiClient), HttpStatusCode.TooManyRequests, waitTime.Seconds);
                         return waitTime;
                     }
@@ -84,22 +65,15 @@ namespace Orbit.Api
                 .ExecuteAsync(async () =>
                 {
                     // create this inside the executeAsync because you can't send the same request twice
-                    var request = new HttpRequestMessage(HttpMethod.Post, url)
+                    var request = new HttpRequestMessage(method, url)
                     {
                         Content = new StringContent(body)
                     };
                     request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // don't forget this!
-                    return await _httpClient.SendAsync(request);
+                    return await HttpClient.SendAsync(request);
                 });
-            
-            return await ReadResponse<T>(response);
-        }
-    }
 
-    public class OrbitApiException : Exception
-    {
-        public OrbitApiException(string message) : base(message)
-        {
+            return await ReadResponse<DocumentRoot<T>>(response);
         }
     }
 }

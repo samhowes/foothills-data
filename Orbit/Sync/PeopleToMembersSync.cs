@@ -93,7 +93,7 @@ namespace Sync
                     mapping.OrbitId = created.Data.Id;
                     progress.Success++;
                 }
-                catch (OrbitApiException orbitEx)
+                catch (ApiException orbitEx)
                 {
                     mapping.Error = orbitEx.Message;
                     _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,

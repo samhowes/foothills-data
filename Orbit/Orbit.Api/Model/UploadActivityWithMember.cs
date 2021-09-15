@@ -26,13 +26,13 @@ namespace Orbit.Api.Model
     /// ActivityWithMember
     /// </summary>
     [DataContract]
-        public partial class ActivityWithMember : Activity,  IEquatable<ActivityWithMember>
+        public partial class UploadActivityWithMember : UploadActivity,  IEquatable<UploadActivityWithMember>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActivityWithMember" /> class.
+        /// Initializes a new instance of the <see cref="UploadActivityWithMember" /> class.
         /// </summary>
         /// <param name="member">member.</param>
-        public ActivityWithMember(Member member = default(Member), string description = default(string), string link = default(string), string linkText = default(string), string title = default(string), string weight = default(string), string activityType = default(string), string key = default(string), string occurredAt = default(string), List<string> tags = default(List<string>)) : base()
+        public UploadActivityWithMember(Member member = default(Member), string description = default(string), string link = default(string), string linkText = default(string), string title = default(string), string weight = default(string), string activityType = default(string), string key = default(string), string occurredAt = default(string), List<string> tags = default(List<string>)) : base()
         {
             this.Member = member;
         }
@@ -56,15 +56,6 @@ namespace Orbit.Api.Model
             sb.Append("}\n");
             return sb.ToString();
         }
-  
-        /// <summary>
-        /// Returns the JSON string presentation of the object
-        /// </summary>
-        /// <returns>JSON string presentation of the object</returns>
-        public override string ToJson()
-        {
-            return JsonConvert.SerializeObject(this, Formatting.Indented);
-        }
 
         /// <summary>
         /// Returns true if objects are equal
@@ -73,7 +64,7 @@ namespace Orbit.Api.Model
         /// <returns>Boolean</returns>
         public override bool Equals(object input)
         {
-            return this.Equals(input as ActivityWithMember);
+            return this.Equals(input as UploadActivityWithMember);
         }
 
         /// <summary>
@@ -81,7 +72,7 @@ namespace Orbit.Api.Model
         /// </summary>
         /// <param name="input">Instance of ActivityWithMember to be compared</param>
         /// <returns>Boolean</returns>
-        public bool Equals(ActivityWithMember input)
+        public bool Equals(UploadActivityWithMember input)
         {
             if (input == null)
                 return false;

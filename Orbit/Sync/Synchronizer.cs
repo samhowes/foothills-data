@@ -1,7 +1,5 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +8,7 @@ using Serilog;
 
 namespace Sync
 {
+    public record SyncConfig(long MaxCount);
     public record BatchInfo(string Url, Meta Meta, Links Links);
     
     interface ISync
@@ -27,13 +26,15 @@ namespace Sync
         private readonly ILogger _log;
         private readonly IServiceProvider _services;
         private readonly LogDbContext _logDb;
+        private readonly SyncConfig _config;
 
 
-        public Synchronizer(ILogger log, IServiceProvider services, LogDbContext logDb)
+        public Synchronizer(ILogger log, IServiceProvider services, LogDbContext logDb, SyncConfig config)
         {
             _log = log;
             _services = services;
             _logDb = logDb;
+            _config = config;
         }
 
         public async Task PeopleToMembers()
@@ -98,6 +99,13 @@ namespace Sync
                     progress.TotalTime += progress.Timer.ElapsedMilliseconds;
                     
                     await _logDb.SaveChangesAsync();
+
+                    if (_config.MaxCount > 0 && progress.Success > _config.MaxCount)
+                    {
+                        _log.Information("MaxCount of {MaxCount} exceeded with {SuccessCount}", 
+                            _config.MaxCount, progress.Success);
+                        break;
+                    }
                     if (progress.NextUrl == null) break;
                 }
             }

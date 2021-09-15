@@ -33,6 +33,14 @@ namespace Sync
             services.AddTransient<PeopleToMembersSync>();
             services.AddTransient<CheckInsToActivitiesSync>();
 
+            services.AddSingleton(new SyncConfig(10000));
+            
+            // todo(#15) remove this config
+            services.AddSingleton(new CheckInsToActivitiesSyncConfig());
+            services.AddSingleton(new CheckInsToActivitiesSyncConfig(
+                Mode: SyncMode.Update,
+                Params: ("order", "-created_at")));
+
             var provider = services.BuildServiceProvider();
             var sync = provider.GetRequiredService<Synchronizer>();
 
@@ -70,4 +78,6 @@ namespace Sync
             return log;
         }
     }
+
+    
 }
