@@ -6,20 +6,17 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using PlanningCenter.Api.CheckIns;
-using Serilog;
 
 namespace Sync
 {
-    public record CheckInsToActivitiesSyncConfig : SyncImplConfig
+    public record CheckInsToActivitiesSyncConfig 
     {
         public (string Name, string Value)[] Params { get; }
 
-        public CheckInsToActivitiesSyncConfig(SyncMode mode = SyncMode.Create,
-            params (string Name, string Value)[] @params) : base(mode)
+        public CheckInsToActivitiesSyncConfig(params (string Name, string Value)[] @params)
         {
             Params = @params;
         }
@@ -29,27 +26,20 @@ namespace Sync
     {
         private readonly CheckInsClient _checkInsClient;
         private DocumentRoot<List<CheckIn>> _checkIns = null!;
-        private readonly LogDbContext _logDb;
         private readonly CheckInsToActivitiesSyncConfig _config;
         private Event _worship = null!;
         private HashSet<string> _ignoredEventIds = null!;
         private Blob _blob = null!;
 
-        public CheckInsToActivitiesSync(CheckInsClient checkInsClient,
-            LogDbContext logDb,
-            OrbitApiClient orbitClient,
-            ILogger log,
-            CheckInsToActivitiesSyncConfig config,
-            DataCache cache)
-            : base(config, orbitClient, cache, log, logDb, checkInsClient)
+        public CheckInsToActivitiesSync(
+            SyncDeps deps,
+            CheckInsClient checkInsClient,
+            CheckInsToActivitiesSyncConfig config)
+            : base(deps, checkInsClient)
         {
             _checkInsClient = checkInsClient;
-            _logDb = logDb;
             _config = config;
         }
-
-        public override string From => "CheckIns";
-        public override string To => "Activities";
 
         public override async Task<DocumentRoot<List<CheckIn>>> GetInitialDataAsync(string? nextUrl)
         {
@@ -89,7 +79,7 @@ namespace Sync
             }
 
             const string skippedKey = "skippedEvents";
-            _blob = await _logDb.Blobs.SingleOrDefaultAsync(b => b.Key == skippedKey);
+            _blob = await Deps.LogDb.Blobs.SingleOrDefaultAsync(b => b.Key == skippedKey);
             if (_blob == null)
             {
                 _blob = new Blob() {Key = skippedKey, Value = ""};
@@ -115,7 +105,7 @@ namespace Sync
                         Log.Information("Ignoring event {EventLink}: {EventJson}", self,
                             JsonConvert.SerializeObject(details.Data));
                         _blob.Value = string.Join(",", _ignoredEventIds);
-                        await _logDb.SaveChangesAsync();
+                        await Deps.LogDb.SaveChangesAsync();
                     }
 
                     progress.Skipped++;
@@ -125,31 +115,26 @@ namespace Sync
                 if (checkIn.Person == null)
                 {
                     Log.Warning("No person associated with CheckIn {CheckInId}", checkIn.Id);
-                    _logDb.Mappings.Add(new Mapping()
+                    Deps.LogDb.Mappings.Add(new Mapping()
                     {
                         PlanningCenterId = checkIn.Id,
                         Type = nameof(CheckIn),
                         Error = $"Missing person for {checkIn.Links.Self()}"
                     });
-                    await _logDb.SaveChangesAsync();
+                    await Deps.LogDb.SaveChangesAsync();
                     continue;
                 }
 
-                var activity = new UploadActivity()
-                {
-                    Title = $"Checked in for Worship for {eventTime.Name}",
-                    Key = OrbitUtil.ActivityKey(checkIn),
-                    Link =
-                        $"https://check-ins.planningcenteronline.com/event_periods/{checkIn.EventPeriod.Id}/check_ins/{checkIn.Id}",
-                    LinkText = "CheckIn",
-                    ActivityType = "Online Worship Attendance",
-                    OccurredAt = checkIn.CreatedAt,
-                    Tags = new List<string>()
-                    {
-                        "channel:Worship"
-                    },
-                    Weight = "5"
-                };
+                var activity = new UploadActivity(
+                    "Worship",
+                    "Online Worship Attendance",
+                    OrbitUtil.ActivityKey(checkIn),
+                    checkIn.CreatedAt,
+                    5m,
+                    $"Checked in for Worship for {eventTime.Name}",
+                    $"https://check-ins.planningcenteronline.com/event_periods/{checkIn.EventPeriod.Id}/check_ins/{checkIn.Id}",
+                    "CheckIn"
+                );
 
                 await UploadActivity(progress, checkIn, activity, checkIn.Person.Id);
             }

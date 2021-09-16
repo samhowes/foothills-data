@@ -20,6 +20,24 @@ namespace Sync
 
     public record SyncImplConfig(SyncMode Mode = SyncMode.Create);
 
+    public class SyncDeps
+    {
+        public SyncImplConfig Config { get; }
+        public OrbitApiClient OrbitClient { get; }
+        public DataCache Cache { get; }
+        public ILogger Log { get; }
+        public LogDbContext LogDb { get; }
+
+        public SyncDeps(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log, LogDbContext logDb)
+        {
+            Config = config;
+            OrbitClient = orbitClient;
+            Cache = cache;
+            Log = log;
+            LogDb = logDb;
+        }
+    }
+
     public abstract class Sync<TSource> where TSource : EntityBase
     {
         private readonly SyncImplConfig _config;
@@ -28,18 +46,21 @@ namespace Sync
         protected readonly ILogger Log;
         private readonly LogDbContext _logDb;
 
-        protected Sync(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log, LogDbContext logDb, PlanningCenterClient planningCenterClient)
+        protected Sync(SyncDeps deps, PlanningCenterClient planningCenterClient)
         {
-            _config = config;
-            _orbitClient = orbitClient;
-            _cache = cache;
-            Log = log;
-            _logDb = logDb;
+            Deps = deps;
+            _config = deps.Config;
+            _orbitClient = deps.OrbitClient;
+            _cache = deps.Cache;
+            Log = deps.Log;
+            _logDb = deps.LogDb;
             PlanningCenterClient = planningCenterClient;
         }
-        
-        public abstract string From { get; }
-        public abstract string To { get; }
+
+        protected SyncDeps Deps { get; }
+
+        public string From => typeof(TSource).Name;
+        public virtual string To => "Activity";
         
         public PlanningCenterClient PlanningCenterClient { get; }
 
@@ -106,17 +127,17 @@ namespace Sync
         private async Task UpsertActivity<TActivitySource>(TActivitySource source, UploadActivity activity, string personId, Identity? identity)
             where TActivitySource : EntityBase
         {
-            if (!_cache.TryGetValue<Person>(personId, out var memberSlug))
+            if (!_cache.TryGetMapping<Person>(personId, out var memberSlug))
             {
                 var member = await _orbitClient.GetAsync<Member>("members/find",
                     ("source", Constants.PlanningCenterSource),
                     ("uid", personId));
 
                 memberSlug = member.Data.Slug;
-                _cache.Set<Person>(personId, memberSlug);
+                _cache.SetMapping<Person>(personId, memberSlug);
             }
 
-            if (!_cache.TryGetValue<TActivitySource>(source.Id, out var activityId))
+            if (!_cache.TryGetMapping<TActivitySource>(source.Id, out var activityId))
             {
                 string? nextUrl = null;
                 for (;;)
@@ -131,7 +152,7 @@ namespace Sync
                         var sourceId = OrbitUtil.EntityId<TActivitySource>(maybe.Key);
                         if (sourceId == null) continue;
 
-                        _cache.Set<TActivitySource>(sourceId, maybe.Id);
+                        _cache.SetMapping<TActivitySource>(sourceId, maybe.Id);
                     }
 
                     nextUrl = OrbitUtil.TrimLink(batch.Links.Next());
@@ -150,5 +171,7 @@ namespace Sync
                     $"members/{memberSlug}/activities/{activityId}", activity);
             }
         }
+
+        public string LastDate { get; set; }
     }
 }

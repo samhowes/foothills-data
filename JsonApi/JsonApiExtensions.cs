@@ -23,7 +23,7 @@ namespace JsonApi
     public static class MetaExtensions
     {
         public static long GetInt(this Meta meta, string key) => (long) ((JValue) meta[key]).Value!;
-        public static int PageCount(this Meta meta) => (int)Math.Ceiling(TotalCount(meta) / (decimal)Count(meta));
+        public static int PageCount(this Meta meta) => (int)Math.Ceiling(TotalCount(meta) / (decimal)Math.Max(Count(meta), 1L));
         public static long TotalCount(this Meta meta) => meta.GetInt("total_count");
 
         public static long Count(this Meta meta) => meta.GetInt("count");

@@ -3,11 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using JsonApi;
-using JsonApiSerializer;
-using JsonApiSerializer.ContractResolvers;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Serilog;
 
 namespace PlanningCenter.Api
@@ -35,10 +31,17 @@ namespace PlanningCenter.Api
             services.AddHttpClient<PeopleClient>(ConfigureClient(PeopleClient.ApiPrefix));
             services.AddHttpClient<CheckInsClient>(ConfigureClient(CheckInsClient.ApiPrefix));
             services.AddHttpClient<GivingClient>(ConfigureClient(GivingClient.ApiPrefix));
+            services.AddHttpClient<GroupsClient>(ConfigureClient(GroupsClient.ApiPrefix));
             return services;
         }
     }
 
+    public class PlanningCenterClient : ApiClientBase
+    {
+        public PlanningCenterClient(HttpClient httpClient, ILogger log) : base(log, httpClient)
+        {
+        }
+    }
     
     public class CheckInsClient : PlanningCenterClient
     {
@@ -66,10 +69,12 @@ namespace PlanningCenter.Api
         {
         }
     }
-
-    public class PlanningCenterClient : ApiClientBase
+    
+    public class GroupsClient : PlanningCenterClient
     {
-        public PlanningCenterClient(HttpClient httpClient, ILogger log) : base(log, httpClient)
+        public const string ApiPrefix = "groups";
+
+        public GroupsClient(HttpClient httpClient, ILogger log) : base(httpClient, log)
         {
         }
     }

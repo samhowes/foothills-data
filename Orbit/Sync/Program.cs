@@ -31,17 +31,28 @@ namespace Sync
             services.AddSingleton(db);
 
             services.AddSingleton<Synchronizer>();
+
+            services.AddSingleton(new SyncImplConfig());
+            services.AddTransient<SyncDeps>();
+            
             services.AddSingleton<DataCache>();
             services.AddTransient<PeopleToMembersSync>();
             services.AddTransient<CheckInsToActivitiesSync>();
             services.AddTransient<DonationsToActivitiesSync>();
+
+            services.AddSingleton(new GroupsConfig());
+            services.AddTransient<GroupAttendanceSync>();
+            
+            services.AddTransient<MembershipSync>();
+
+            services.AddSingleton(new NotesConfig());
+            services.AddTransient<NotesToActivitiesSync>();
 
             services.AddSingleton(new SyncConfig(0));
             
             // todo(#15) remove this config
             services.AddSingleton(new CheckInsToActivitiesSyncConfig());
             services.AddSingleton(new CheckInsToActivitiesSyncConfig(
-                mode: SyncMode.Update,
                 @params: ("order", "-created_at")));
 
             services.AddSingleton(new DonationsConfig()
@@ -60,7 +71,13 @@ namespace Sync
             {
                 // await sync.PeopleToMembers();
                 // await sync.CheckInsToActivities();
-                await sync.DonationsToActivities();
+                // await sync.DonationsToActivities();
+                
+                // await sync.GroupAttendanceToActivities();
+                // await sync.GroupToActivities();
+                
+                await sync.NotesToActivities();
+                
             }
             catch (Exception e)
             {
@@ -89,13 +106,5 @@ namespace Sync
             await log.Database.EnsureCreatedAsync();
             return log;
         }
-    }
-
-    public record DonationsConfig : SyncImplConfig
-    {
-        public DonationsConfig(SyncMode mode = SyncMode.Create) : base(mode)
-        {
-        }
-        public HashSet<string>? ExcludedFundIds { get; init; }
     }
 }

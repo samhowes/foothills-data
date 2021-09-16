@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 using static ApiCrawler.Logger;
 
 namespace ApiCrawler

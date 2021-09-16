@@ -1,34 +1,51 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using PlanningCenter.Api;
+using PlanningCenter.Api.Groups;
 
 namespace Sync
 {
     public class DataCache
     {
-        private readonly Dictionary<Type, Dictionary<string, string>> _caches = new();
+        private readonly Dictionary<string, object> _cache = new();
 
-        public bool TryGetValue<T>(string key, out string? value)
+        private const string Mapping = "mapping";
+        private const string Entity = "entity";
+        private string Key<T>(string prefix, string key) => $"{typeof(T).Name}:{prefix}:{key}";
+        
+        public bool TryGetMapping<T>(string key, out string? value)
+            => GetValue(Key<T>(Mapping, key), out value);
+        
+        public bool TryGetEntity<T>(string key, out T? value) where T : class 
+            => GetValue(Key<T>(Entity, key), out value);
+
+        private bool GetValue<T>(string key, out T? value) where T : class
         {
-            var cache = GetCache<T>();
-
-            return cache.TryGetValue(key, out value);
+            var exists = _cache.TryGetValue(key, out var cachedValue);
+            value = cachedValue as T;
+            return exists;
         }
 
-        private Dictionary<string, string> GetCache<T>()
+        public void SetMapping<T>(string key, string value)
         {
-            if (_caches.TryGetValue(typeof(T), out var cache)) return cache;
-            
-            cache = new Dictionary<string, string>();
-            _caches[typeof(T)] = cache;
-
-            return cache;
+            _cache[Key<T>(Mapping, key)] = value;
+        }
+        
+        public void SetEntity<T>(T value) where T : EntityBase
+        {
+            _cache[Key<T>(Entity, value.Id)] = value!;
         }
 
-        public void Set<T>(string key, string value)
+        public async Task<T> GetOrAddEntity<T>(string key, Func<string, Task<T>> func) where T : EntityBase
         {
-            var cache = GetCache<T>();
-            cache[key] = value;
+            if (!TryGetEntity<T>(key, out var entity))
+            {
+                entity = await func(key);
+                SetEntity(entity);
+            }
+
+            return entity!;
         }
     }
     
@@ -54,6 +71,9 @@ namespace Sync
                 ? null
                 : activityKey[(name.Length + 1)..];
         }
-        
+
+        public static string GroupLink(Group group)
+            => $"https://groups.planningcenteronline.com/groups/{group.Id}";
+
     }
 }

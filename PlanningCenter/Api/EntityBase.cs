@@ -4,7 +4,7 @@ namespace PlanningCenter.Api
 {
     public class EntityBase
     {
-        public string Id { get; set; }
-        public Links Links { get; set; }
+        public string? Id { get; set; }
+        public Links? Links { get; set; }
     }
 }

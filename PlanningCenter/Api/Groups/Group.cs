@@ -1,5 +1,15 @@
+using System.Collections.Generic;
+using JsonApiSerializer.JsonApi;
+
 namespace PlanningCenter.Api.Groups
 {
+    public class Image
+    {
+        public string Thumbnail { get; set;  }
+        public string Medium { get; set;  }
+        public string Original { get; set;  }
+    }
+    
     public class Group : EntityBase
     {
         public string ArchivedAt { get; set; }
@@ -9,16 +19,14 @@ namespace PlanningCenter.Api.Groups
         public string EnrollmentOpen { get; set; }
         public string EnrollmentStrategy { get; set; }
         public string EventsVisibility { get; set; }
-        public string HeaderImage { get; set; }
+        public Image HeaderImage { get; set; }
         public string LocationTypePreference { get; set; }
         public string MembershipsCount { get; set; }
         public string Name { get; set; }
         public string PublicChurchCenterWebUrl { get; set; }
         public string Schedule { get; set; }
         public string VirtualLocationUrl { get; set; }
-        public string GroupTypeId { get; set; }
         public GroupType GroupType { get; set; }
-        public string LocationId { get; set; }
         public Location Location { get; set; }
     }
 }

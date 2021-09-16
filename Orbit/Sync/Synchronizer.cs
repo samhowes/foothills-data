@@ -46,6 +46,18 @@ namespace Sync
             var impl = _services.GetRequiredService<DonationsToActivitiesSync>();
             await Sync(impl);
         }
+        
+        public async Task NotesToActivities()
+        {
+            var impl = _services.GetRequiredService<NotesToActivitiesSync>();
+            await Sync(impl);
+        }
+        
+        public async Task GroupAttendanceToActivities()
+        {
+            var impl = _services.GetRequiredService<GroupAttendanceSync>();
+            await Sync(impl);
+        }
 
         private async Task Sync<TSource>(Sync<TSource> impl) where TSource : EntityBase
         {
@@ -99,12 +111,10 @@ namespace Sync
                 foreach (var item in batch.Data)
                 {
                     await impl.ProcessBatchAsync(batchStats, item);
-
-                    Report(impl, batchStats, progress, batch);
                 }
-
+                
                 progress.TotalTime += progress.Timer.ElapsedMilliseconds;
-
+                Report(impl, batchStats, progress, batch);
                 await _logDb.SaveChangesAsync();
                 if (_config.MaxCount > 0 && progress.Success >= _config.MaxCount)
                 {
@@ -127,8 +137,8 @@ namespace Sync
             where TSource : EntityBase
         {
             _log.Information(
-                "Batch: processed {TotalRecords} {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s",
-                batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond);
+                "Batch: processed {TotalRecords} of type {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s; LastDate {LastDate}",
+                batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond, impl.LastDate);
 
             progress.Accumulate(batchStats);
             _log.Information(
@@ -137,6 +147,12 @@ namespace Sync
                 progress.SecondsElapsed, progress.Total, batch.Meta.TotalCount(), progress.Success,
                 progress.Skipped,
                 progress.Failed, progress.RecordsPerSecond);
+        }
+
+        public async Task GroupToActivities()
+        {
+            var impl = _services.GetRequiredService<MembershipSync>();
+            await Sync(impl);
         }
     }
 }

@@ -7,7 +7,6 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Orbit.Api.Model;
 using Polly;
 using Serilog;

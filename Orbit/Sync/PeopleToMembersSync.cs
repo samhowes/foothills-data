@@ -5,11 +5,9 @@ using System.Threading.Tasks;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
-using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using PlanningCenter.Api.CheckIns;
-using Serilog;
 
 namespace Sync
 {
@@ -21,29 +19,21 @@ namespace Sync
     public class PeopleToMembersSync : Sync<Person>
     {
         private readonly PeopleClient _peopleClient;
-        private readonly LogDbContext _logDb;
-        private readonly OrbitApiClient _orbitClient;
-        private readonly ILogger _log;
         private Dictionary<string,Mapping> _existing = null!;
         private DocumentRoot<List<Person>> _people = null!;
         
-        public PeopleToMembersSync(PeopleClient peopleClient, LogDbContext logDb, OrbitApiClient orbitClient,
-            ILogger log, DataCache cache)
-            : base(new SyncImplConfig(), orbitClient, cache, log, logDb, peopleClient)
+        public PeopleToMembersSync(PeopleClient peopleClient, SyncDeps deps)
+            : base(deps, peopleClient)
         {
             _peopleClient = peopleClient;
-            _logDb = logDb;
-            _orbitClient = orbitClient;
-            _log = log;
         }
 
-        public override string From => "People";
         public override string To => "Members";
 
         public override async Task<DocumentRoot<List<Person>>> GetInitialDataAsync(string? nextUrl)
         {
             _people = await _peopleClient.GetAsync<List<Person>>(nextUrl ?? "people");
-            _existing = await _logDb.Mappings
+            _existing = await Deps.LogDb.Mappings
                 .Where(m => m.Type == nameof(Person))
                 .ToDictionaryAsync(m => m.PlanningCenterId!);
             return _people;
@@ -82,25 +72,25 @@ namespace Sync
 
             try
             {
-                var created = await _orbitClient.PostAsync<Member>("members", member);
+                var created = await Deps.OrbitClient.PostAsync<Member>("members", member);
                 mapping.OrbitId = created.Data.Id;
                 progress.Success++;
             }
             catch (ApiException orbitEx)
             {
                 mapping.Error = orbitEx.Message;
-                _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
+                Deps.Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
                     mapping.Error);
                 progress.Failed++;
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
+                Deps.Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
                 mapping.Error = ex.ToString();
                 progress.Failed++;
             }
 
-            _logDb.Mappings.Add(mapping);
+            Deps.LogDb.Mappings.Add(mapping);
         }
     }
 }

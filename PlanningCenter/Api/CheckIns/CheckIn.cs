@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using JsonApi;
 using JsonApiSerializer.JsonApi;
 
 namespace PlanningCenter.Api.CheckIns

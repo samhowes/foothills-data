@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -42,6 +43,17 @@ namespace JsonApi
             };
         }
 
+        public async IAsyncEnumerable<DocumentRoot<T>> GetAllAsync<T>(string url)
+        {
+            var data = await GetAsync<T>(url);
+            yield return data;
+            while (!string.IsNullOrEmpty(data.Links.Next()))
+            {
+                data = await GetAsync<T>(data.Links.Next());
+                yield return data;
+            }
+        }
+        
         public async Task<DocumentRoot<T>> GetAsync<T>(string url, params (string key, string value)[] parameters)
         {
             if (parameters.Length > 0)
