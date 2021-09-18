@@ -8,16 +8,26 @@ using PlanningCenter.Api.Giving;
 
 namespace Sync
 {
+    public static class PlanningCenterUtil
+    {
+        public static string DonationLink(Donation donation) =>
+            $"https://giving.planningcenteronline.com/donations/{donation.Id}";
+    }
+    
+    public static class ActivityType
+    {
+        public const string Donation = "Donation";
+    }
     public record DonationsConfig : SyncImplConfig
     {
         public HashSet<string>? ExcludedFundIds { get; init; }
     }
-    
+
     public class PlanningCenterCache
     {
         public Dictionary<string, Fund> Funds { get; } = new();
     }
-    
+
     public class DonationsToActivitiesSync : Sync<Donation>
     {
         private readonly GivingClient _givingClient;
@@ -32,16 +42,23 @@ namespace Sync
             _config = config;
         }
 
+        protected override List<ActivityMapping> ActivityTypes { get; } = new()
+        {
+            new ActivityMapping<Designation>(ActivityType.Donation)
+        };
+
         public override async Task<DocumentRoot<List<Donation>>> GetInitialDataAsync(string? nextUrl)
         {
+            await base.GetInitialDataAsync(nextUrl);
+            
             if (nextUrl != null)
             {
                 return await _givingClient.GetAsync<List<Donation>>(nextUrl);
             }
 
-            return  await _givingClient.GetAsync<List<Donation>>("donations",
+            return await _givingClient.GetAsync<List<Donation>>("donations",
                 ("include", "designations"),
-                ("order", "created_at"),
+                ("order", "-created_at"),
                 ("succeeded", "true"));
         }
 
@@ -56,26 +73,28 @@ namespace Sync
 
             if (donation.Person == null)
             {
-                Deps.Log.Debug("Ignoring donation with no person attached: {DonationLink}", donation.Links.Self());
+                Deps.Log.Debug("Ignoring donation with no person attached: {DonationLink}, Batch: {BatchId}", 
+                    PlanningCenterUtil.DonationLink(donation), donation.Batch?.Id);
                 progress.Skipped++;
                 return;
             }
-            
+
             foreach (var designation in donation.Designations.Data)
             {
-                if (_config.ExcludedFundIds?.Contains(designation.Fund.Id) == true)
+                if (_config.ExcludedFundIds?.Contains(designation.Fund.Id!) == true)
                 {
                     Deps.Log.Debug("Skipping Fund {FundId}", designation.Fund.Id);
                     progress.Skipped++;
                     continue;
                 }
 
-                if (!_cache.Funds.TryGetValue(designation.Fund.Id, out var fund))
+                if (!_cache.Funds.TryGetValue(designation.Fund.Id!, out var fund))
                 {
                     var fundDocument = await _givingClient.GetAsync<Fund>($"funds/{designation.Fund.Id}");
                     fund = fundDocument.Data;
-                    _cache.Funds[fund.Id] = fund;
+                    _cache.Funds[fund.Id!] = fund;
                 }
+
                 
                 var activity = new UploadActivity(
                     "Giving",
@@ -84,13 +103,12 @@ namespace Sync
                     donation.ReceivedAt,
                     2m,
                     $"Donated to {fund.Name}",
-                    donation.Links.Self(),
+                    PlanningCenterUtil.DonationLink(donation),
                     "Donation"
                 );
-
-                await UploadActivity(progress, donation, activity, donation.Person.Id);
+                
+                await UploadActivity(progress, designation, activity, donation.Person.Id!);
             }
-
         }
     }
 }

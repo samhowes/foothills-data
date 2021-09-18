@@ -26,7 +26,7 @@ namespace Orbit.Api.Model
         /// </summary>
         /// <param name="member">member.</param>
         /// <param name="identity">identity.</param>
-        public MemberAndIdentity(Member member = default(Member), Identity identity = default(Identity))
+        public MemberAndIdentity(Member member = default(Member), OtherIdentity identity = default(OtherIdentity))
         {
             this.Member = member;
             this.Identity = identity;
@@ -42,7 +42,7 @@ namespace Orbit.Api.Model
         /// Gets or Sets Identity
         /// </summary>
         [DataMember(Name="identity", EmitDefaultValue=false)]
-        public Identity Identity { get; set; }
+        public OtherIdentity Identity { get; set; }
 
         /// <summary>
         /// Returns the string presentation of the object

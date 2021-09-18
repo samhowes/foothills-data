@@ -46,9 +46,20 @@ namespace Orbit.Api
             return await UploadAsync<T>(url, data, HttpMethod.Put);
         }
 
-        private async Task<DocumentRoot<T>> UploadAsync<T>(string url, object data, HttpMethod? method)
+        private async Task<DocumentRoot<T>> UploadAsync<T>(string url, object? data, HttpMethod method)
         {
-            var body = JsonConvert.SerializeObject(data, WriteJsonSettings);
+            var response = await SendAsync(url, data, method);
+
+            return await ReadResponse<DocumentRoot<T>>(response);
+        }
+
+        private async Task<HttpResponseMessage> SendAsync(string url, object? data, HttpMethod method)
+        {
+            string? body = null;
+            if (data != null)
+            {
+                body = JsonConvert.SerializeObject(data, WriteJsonSettings);
+            }
 
             var response = await Policy
                 .HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.TooManyRequests)
@@ -64,22 +75,30 @@ namespace Orbit.Api
                 .ExecuteAsync(async () =>
                 {
                     // create this inside the executeAsync because you can't send the same request twice
-                    var request = new HttpRequestMessage(method, url)
+                    var request = new HttpRequestMessage(method, url);
+                    if (body != null)
                     {
-                        Content = new StringContent(body)
-                    };
-                    request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // don't forget this!
+                        request.Content = new StringContent(body);
+                        request.Content.Headers.ContentType =
+                            new MediaTypeHeaderValue("application/json"); // don't forget this!
+                    }
+
                     return await HttpClient.SendAsync(request);
                 });
-
-            return await ReadResponse<DocumentRoot<T>>(response);
+            return response;
         }
 
-        public record AddActivity(UploadActivity Activity, Identity Identity);
-        public async Task CreateActivity(UploadActivity uploadActivity, Identity identity)
+        public record AddActivity(UploadActivity Activity, OtherIdentity Identity);
+        public async Task CreateActivity(UploadActivity uploadActivity, OtherIdentity identity)
         {
             var created = await PostAsync<DocumentRoot<UploadActivity>>("activities", 
                 new AddActivity(uploadActivity, identity));
+        }
+
+        public async Task<bool> Delete(string url)
+        {
+            var response = await SendAsync(url, null, HttpMethod.Delete);
+            return response.IsSuccessStatusCode;
         }
     }
 }

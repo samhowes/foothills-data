@@ -137,13 +137,13 @@ namespace Sync
             where TSource : EntityBase
         {
             _log.Information(
-                "Batch: processed {TotalRecords} of type {RecordType} in {TotalSeconds} at {RecordsPerSecond} records/s; LastDate {LastDate}",
+                "Batch: processed {TotalRecords} of type {RecordType} in {TotalSeconds} at {RecordsPerSecond:F1} records/s; LastDate {LastDate}",
                 batchStats.Total, impl.From, batchStats.SecondsElapsed, batchStats.RecordsPerSecond, impl.LastDate);
 
             progress.Accumulate(batchStats);
             _log.Information(
                 "Overall: elapsed: {Elapsed} s; processed/queued: {TotalProcessed}/{QueueCount}; " +
-                "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond}",
+                "success: {Success}; skipped: {Skipped}; failed: {Failed}; RecordsPerSecond: {RecordsPerSecond:F1}",
                 progress.SecondsElapsed, progress.Total, batch.Meta.TotalCount(), progress.Success,
                 progress.Skipped,
                 progress.Failed, progress.RecordsPerSecond);

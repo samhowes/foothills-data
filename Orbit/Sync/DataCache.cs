@@ -8,33 +8,48 @@ namespace Sync
 {
     public class DataCache
     {
-        private readonly Dictionary<string, object> _cache = new();
+        private readonly Dictionary<string, object> _cache = new(StringComparer.OrdinalIgnoreCase);
 
         private const string Mapping = "mapping";
         private const string Entity = "entity";
-        private string Key<T>(string prefix, string key) => $"{typeof(T).Name}:{prefix}:{key}";
+        private string Key<T>(string prefix, string key) => Key(typeof(T).Name, prefix, key);
+        private string Key(string entityName, string prefix, string key) => $"{entityName}:{prefix}:{key}";
         
         public bool TryGetMapping<T>(string key, out string? value)
             => GetValue(Key<T>(Mapping, key), out value);
+        
+        public bool TryGetMapping<T>(T entity, out string? value) where T : EntityBase
+            => GetValue(Key<T>(Mapping, entity.Id!), out value);
         
         public bool TryGetEntity<T>(string key, out T? value) where T : class 
             => GetValue(Key<T>(Entity, key), out value);
 
         private bool GetValue<T>(string key, out T? value) where T : class
         {
-            var exists = _cache.TryGetValue(key, out var cachedValue);
-            value = cachedValue as T;
-            return exists;
+            lock (_cache)
+            {
+                var exists = _cache.TryGetValue(key, out var cachedValue);
+                value = cachedValue as T;
+                return exists;
+            }
         }
 
-        public void SetMapping<T>(string key, string value)
+        public void SetMapping<T>(string key, string value) => SetMapping(typeof(T).Name, key, value);
+        
+        public void SetMapping(string entityName, string key, string value)
         {
-            _cache[Key<T>(Mapping, key)] = value;
+            lock (_cache)
+            {
+                _cache[Key(entityName, Mapping, key)] = value;    
+            }
         }
         
         public void SetEntity<T>(T value) where T : EntityBase
         {
-            _cache[Key<T>(Entity, value.Id)] = value!;
+            lock (_cache)
+            {
+                _cache[Key<T>(Entity, value.Id!)] = value!;    
+            }
         }
 
         public async Task<T> GetOrAddEntity<T>(string key, Func<string, Task<T>> func) where T : EntityBase
@@ -46,6 +61,18 @@ namespace Sync
             }
 
             return entity!;
+        }
+        
+        public async Task<string?> GetOrAddMapping<T>(string entityId, Func<string, Task<string?>> func) where T : EntityBase
+        {
+            if (!TryGetMapping<T>(entityId, out var mapped))
+            {
+                mapped = await func(entityId);
+                if (mapped != null)
+                    SetMapping<T>(entityId, mapped);
+            }
+
+            return mapped!;
         }
     }
     
@@ -63,13 +90,12 @@ namespace Sync
         {
             return $"{typeof(TEntity).Name.ToLower()}/{entity.Id}";
         }
-        public static string? EntityId<TEntity>(string activityKey) where TEntity : EntityBase
+        public static (string entityName, string id)? EntityId(string? activityKey)
         {
-            var name = typeof(TEntity).Name.ToLower();
-
-            return !activityKey.StartsWith(name)
-                ? null
-                : activityKey[(name.Length + 1)..];
+            if (activityKey == null) return null;
+            var parts = activityKey.Split('/');
+            if (parts.Length < 2) return null;
+            return (parts[0], parts[1]);
         }
 
         public static string GroupLink(Group group)

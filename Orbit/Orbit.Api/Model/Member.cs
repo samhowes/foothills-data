@@ -10,6 +10,7 @@
 
 using System.Text;
 using System.Collections.Generic;
+using JsonApiSerializer.JsonApi;
 
 
 namespace Orbit.Api.Model
@@ -64,6 +65,8 @@ namespace Orbit.Api.Model
         public string Linkedin { get; set; }
         
         public string Devto { get; set; }
+        
+        public Relationship<List<OtherIdentity>> Identities { get; set; }
 
         
         public override string ToString()

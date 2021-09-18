@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Globalization;
+using Humanizer;
 
 namespace Orbit.Api.Model
 {
@@ -27,6 +28,20 @@ namespace Orbit.Api.Model
         
         public List<string> Tags { get; set; }
     }
+
+    public class CustomActivity : ActivityBase
+    {
+        public string? Action { get; set; }
+        public string? CreatedAt { get; set; }
+        public string? UpdatedAt { get; set; }
+        public string? OrbitUrl { get; set; }
+        public string? CustomDescription { get; set; }
+        public string? CustomLink { get; set; }
+        public string? CustomLinkText { get; set; }
+        public string? CustomTitle { get; set; }
+        public string? CustomType { get; set; }
+        public Member Member { get; set; } = null!;
+    }
     
     public class UploadActivity : ActivityBase
     {
@@ -39,7 +54,10 @@ namespace Orbit.Api.Model
             string title, string link, string linkText, params string[]tags)
         {
             // functional fields
-            Tags = tags.Append($"channel:{channel}").ToList();
+            Tags = tags.Concat(new []
+            {
+                $"channel:{channel}",
+            }).ToList();
             ActivityType = type;
             Key = key;
             OccurredAt = occurredAt;
@@ -50,7 +68,7 @@ namespace Orbit.Api.Model
             Link = link;
             LinkText = linkText;
         }
-        public string Type => "activity";
+        public string Type => "custom_activity";
         public string Description { get; set; }
 
 

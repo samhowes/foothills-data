@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Api;
@@ -31,8 +32,7 @@ namespace Sync
             services.AddSingleton(db);
 
             services.AddSingleton<Synchronizer>();
-
-            services.AddSingleton(new SyncImplConfig());
+            
             services.AddTransient<SyncDeps>();
             
             services.AddSingleton<DataCache>();
@@ -63,6 +63,8 @@ namespace Sync
                 })
             });
 
+            services.AddSingleton(new SyncImplConfig(SyncMode.Update));
+            
             var provider = services.BuildServiceProvider();
             var sync = provider.GetRequiredService<Synchronizer>();
 
@@ -71,12 +73,12 @@ namespace Sync
             {
                 // await sync.PeopleToMembers();
                 // await sync.CheckInsToActivities();
-                // await sync.DonationsToActivities();
+                await sync.DonationsToActivities();
                 
                 // await sync.GroupAttendanceToActivities();
                 // await sync.GroupToActivities();
                 
-                await sync.NotesToActivities();
+                // await sync.NotesToActivities();
                 
             }
             catch (Exception e)
@@ -97,13 +99,23 @@ namespace Sync
         
         private static async Task<LogDbContext> GetLog(string root)
         {
+            var options = new DbContextOptionsBuilder<LogDbContext>();
             
-            var dbPath = Path.Combine(root, "log.db");
-
-            var log = new LogDbContext(new DbContextOptionsBuilder<LogDbContext>()
-                .UseSqlite($"Data Source={dbPath}")
-                .Options);
+            if (false)
+            {
+                var connection = new SqliteConnection("Data Source=:memory:");
+                await connection.OpenAsync();
+                options.UseSqlite(connection);
+            }
+            else
+            {
+                var dbPath = Path.Combine(root, "log.db");
+                options.UseSqlite($"Data Source={dbPath}");
+            }
+            
+            var log = new LogDbContext(options.Options);
             await log.Database.EnsureCreatedAsync();
+            
             return log;
         }
     }

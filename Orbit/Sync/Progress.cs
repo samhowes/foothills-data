@@ -11,6 +11,12 @@ namespace Sync
         {
             Timer = new Stopwatch();
         }
+
+        public Progress(string type, string nextUrl) : this()
+        {
+            Type = type;
+            NextUrl = nextUrl;
+        }
         
         [Key]
         public int? Id { get; set; }

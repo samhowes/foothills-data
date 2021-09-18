@@ -41,56 +41,7 @@ namespace Sync
 
         public override async Task ProcessBatchAsync(Progress progress, Person person)
         {
-            if (_existing.TryGetValue(person.Id, out var mapping))
-            {
-                progress.Skipped++;
-                return;
-            }
-
-            mapping = new Mapping()
-            {
-                PlanningCenterId = person.Id,
-            };
-            var tags = new List<string>();
-            if (person.Child == "true")
-                tags.Add("child");
-
-            var member = new UpsertMember()
-            {
-                Birthday = person.Birthdate,
-                Name = person.Name,
-                Slug = person.Id,
-                TagsToAdd = string.Join(",", tags),
-                Identity = new Identity(source: Constants.PlanningCenterSource)
-                {
-                    Email = $"{person.Id}@foothillsuu.org",
-                    Name = person.Name,
-                    Uid = person.Id,
-                    Url = person.Links.Self()!,
-                }
-            };
-
-            try
-            {
-                var created = await Deps.OrbitClient.PostAsync<Member>("members", member);
-                mapping.OrbitId = created.Data.Id;
-                progress.Success++;
-            }
-            catch (ApiException orbitEx)
-            {
-                mapping.Error = orbitEx.Message;
-                Deps.Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
-                    mapping.Error);
-                progress.Failed++;
-            }
-            catch (Exception ex)
-            {
-                Deps.Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
-                mapping.Error = ex.ToString();
-                progress.Failed++;
-            }
-
-            Deps.LogDb.Mappings.Add(mapping);
+            
         }
     }
 }

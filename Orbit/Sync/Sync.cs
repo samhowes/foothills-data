@@ -1,24 +1,48 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Humanizer;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
+using Microsoft.EntityFrameworkCore.Storage;
 using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using Serilog;
-using Person = PlanningCenter.Api.Calendar.Person;
+using Polly;
+using Person = PlanningCenter.Api.People.Person;
 
 namespace Sync
 {
-        
     public enum SyncMode
     {
         Create,
         Update
     }
 
-    public record SyncImplConfig(SyncMode Mode = SyncMode.Create);
+    public abstract class ActivityMapping
+    {
+        protected ActivityMapping(string activityType)
+        {
+            ActivityType = activityType;
+        }
+
+        public string ActivityType { get; }
+    }
+
+    public class ActivityMapping<TEntity> : ActivityMapping where TEntity : EntityBase
+    {
+        public ActivityMapping(string activityType) : base(activityType)
+        {
+        }
+    }
+
+    public record SyncImplConfig(SyncMode Mode = SyncMode.Create)
+    {
+        public bool ShouldDelete { get; set; }
+    }
 
     public class SyncDeps
     {
@@ -27,14 +51,17 @@ namespace Sync
         public DataCache Cache { get; }
         public ILogger Log { get; }
         public LogDbContext LogDb { get; }
+        public PeopleClient PeopleClient { get; set; }
 
-        public SyncDeps(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log, LogDbContext logDb)
+        public SyncDeps(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
+            LogDbContext logDb, PeopleClient peopleClient)
         {
             Config = config;
             OrbitClient = orbitClient;
             Cache = cache;
             Log = log;
             LogDb = logDb;
+            PeopleClient = peopleClient;
         }
     }
 
@@ -59,34 +86,64 @@ namespace Sync
 
         protected SyncDeps Deps { get; }
 
+        protected virtual List<ActivityMapping> ActivityTypes { get; } = new();
         public string From => typeof(TSource).Name;
         public virtual string To => "Activity";
-        
+
         public PlanningCenterClient PlanningCenterClient { get; }
 
-        public abstract Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl);
+        protected EventWaitHandle ActivityDownloadHandle { get; set; }
+        protected Dictionary<string, ActivityLoader> OrbitInfo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public virtual async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
+        {
+            ActivityDownloadHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
+            if (_config.Mode == SyncMode.Update)
+            {
+                foreach (var mapping in ActivityTypes)
+                {
+                    var loader = new ActivityLoader(mapping.ActivityType, Deps, _orbitClient);
+                    
+                    OrbitInfo[mapping.ActivityType] = loader;
+                    await loader.InitAsync();
+                }
+            }
+
+            // return Task.FromResult<DocumentRoot<List<TSource>>>(null!);
+            return new DocumentRoot<List<TSource>>();
+        }
+
         public abstract Task ProcessBatchAsync(Progress progress, TSource item);
 
         protected async Task UploadActivity<TActivitySource>(
-            Progress progress, TActivitySource source, UploadActivity activity, string personId) where TActivitySource : EntityBase
+            Progress progress, TActivitySource source, UploadActivity activity, string personId)
+            where TActivitySource : EntityBase
         {
+            LastDate = activity.OccurredAt;
             try
             {
-                var identity = new Identity(source: Constants.PlanningCenterSource)
+                var occurredAt = DateTime.Parse(activity.OccurredAt);
+                var identity = new OtherIdentity(source: Constants.PlanningCenterSource)
                 {
                     Uid = personId
                 };
-                
-                if (_config.Mode == SyncMode.Create)
+                OrbitInfo? info = null;
+                if (OrbitInfo.TryGetValue(activity.ActivityType, out var loader))
+                {
+                    info = await loader.GetUntil(occurredAt);
+                }
+
+                if (_config.Mode == SyncMode.Create ||
+                    (info != null && info.MaxDate < DateTime.Parse(activity.OccurredAt)))
                 {
                     await _orbitClient.CreateActivity(activity, identity);
+                    progress.Success++;
                 }
                 else
                 {
-                    await UpsertActivity(source, activity, personId, identity);
+                    if (await UpsertActivity(source, activity, personId, identity))
+                        progress.Success++;
                 }
-
-                progress.Success++;
             }
             catch (Exception ex)
             {
@@ -124,51 +181,73 @@ namespace Sync
             }
         }
 
-        private async Task UpsertActivity<TActivitySource>(TActivitySource source, UploadActivity activity, string personId, Identity? identity)
+        private async Task<bool> UpsertActivity<TActivitySource>(TActivitySource source, UploadActivity activity,
+            string personId, OtherIdentity identity)
             where TActivitySource : EntityBase
         {
-            if (!_cache.TryGetMapping<Person>(personId, out var memberSlug))
+            var memberSlug = await _cache.GetOrAddMapping<Person>(personId, async (_) =>
             {
-                var member = await _orbitClient.GetAsync<Member>("members/find",
-                    ("source", Constants.PlanningCenterSource),
-                    ("uid", personId));
+                var person = await Deps.PeopleClient.GetAsync<Person>($"people/{personId}");
+                var slug = await CreateMemberAsync(person.Data);
+                return slug;
+            });
+            if (memberSlug == null) return false;
 
-                memberSlug = member.Data.Slug;
-                _cache.SetMapping<Person>(personId, memberSlug);
-            }
-
-            if (!_cache.TryGetMapping<TActivitySource>(source.Id, out var activityId))
+            if (!_cache.TryGetMapping(source, out var activityId))
             {
-                string? nextUrl = null;
-                for (;;)
-                {
-                    var batch = await _orbitClient.GetAsync<List<ActivityBase>>(
-                        nextUrl ?? $"members/{memberSlug}/activities");
-                    foreach (var maybe in batch.Data)
-                    {
-                        if (string.Equals(maybe.Key, activity.Key, StringComparison.OrdinalIgnoreCase))
-                            activityId = maybe.Id;
-
-                        var sourceId = OrbitUtil.EntityId<TActivitySource>(maybe.Key);
-                        if (sourceId == null) continue;
-
-                        _cache.SetMapping<TActivitySource>(sourceId, maybe.Id);
-                    }
-
-                    nextUrl = OrbitUtil.TrimLink(batch.Links.Next());
-                    if (activityId != null || string.IsNullOrEmpty(nextUrl)) break;
-                }
-            }
-
-            if (activityId == null)
-            {
-                await _orbitClient.CreateActivity(activity, identity);
+                await _orbitClient.CreateActivity(activity, identity!);
             }
             else
             {
-                activity.Description = "";
+                // if we put these tags on when we create, then the api will duplicate them with its own tags
+                // if we leave these tags off of the PUT, then the api will delete the tags
+                activity.Tags.AddRange(new []{
+                    $"custom_type:{activity.Type.Kebaberize()}",
+                    $"custom_title:{activity.Title.Kebaberize()}"});
+                
                 var updated = await _orbitClient.PutAsync<DocumentRoot<UploadActivity>>(
                     $"members/{memberSlug}/activities/{activityId}", activity);
+            }
+
+            return true;
+        }
+
+        protected async Task<string?> CreateMemberAsync(Person person)
+        {
+            var tags = new List<string>();
+            if (person.Child == "true")
+                tags.Add("child");
+
+            var member = new UpsertMember()
+            {
+                Birthday = person.Birthdate,
+                Name = person.Name,
+                Slug = person.Id!,
+                TagsToAdd = string.Join(",", tags),
+                Identity = new OtherIdentity(source: Constants.PlanningCenterSource)
+                {
+                    Email = $"{person.Id}@foothillsuu.org",
+                    Name = person.Name,
+                    Uid = person.Id,
+                    Url = person.Links.Self()!,
+                }
+            };
+
+            try
+            {
+                var created = await Deps.OrbitClient.PostAsync<Member>("members", member);
+                return created.Data.Slug;
+            }
+            catch (ApiException orbitEx)
+            {
+                Deps.Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
+                    orbitEx.Message);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Deps.Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
+                return null;
             }
         }
 
