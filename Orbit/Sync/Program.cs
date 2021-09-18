@@ -4,10 +4,14 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Api;
 using PlanningCenter.Api;
+using SamHowes.Extensions.Configuration.Yaml;
 using Serilog;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Sync
 {
@@ -40,12 +44,14 @@ namespace Sync
             services.AddTransient<CheckInsToActivitiesSync>();
             services.AddTransient<DonationsToActivitiesSync>();
 
+            LoadConfigs(services, 
+                typeof(NotesConfig));
+            
             services.AddSingleton(new GroupsConfig());
             services.AddTransient<GroupAttendanceSync>();
             
             services.AddTransient<MembershipSync>();
 
-            services.AddSingleton(new NotesConfig());
             services.AddTransient<NotesToActivitiesSync>();
 
             services.AddSingleton(new SyncConfig(0));
@@ -73,12 +79,12 @@ namespace Sync
             {
                 // await sync.PeopleToMembers();
                 // await sync.CheckInsToActivities();
-                await sync.DonationsToActivities();
+                // await sync.DonationsToActivities();
                 
                 // await sync.GroupAttendanceToActivities();
                 // await sync.GroupToActivities();
                 
-                // await sync.NotesToActivities();
+                await sync.NotesToActivities();
                 
             }
             catch (Exception e)
@@ -87,6 +93,31 @@ namespace Sync
             }
 
             await db.SaveChangesAsync();
+        }
+
+        private static void LoadConfigs(ServiceCollection services, params Type[] types)
+        {
+            // assume we're in the bin somewhere
+            var dir = Directory.GetCurrentDirectory();
+            var bin = dir!.IndexOf("bin", StringComparison.Ordinal);
+            var projectDir = dir[0..(bin - 1)];
+            var configuration = new ConfigurationBuilder()
+                .AddYamlFile(Path.Combine(projectDir, "sync.yaml"))
+                .Build();
+
+            var baseSection = configuration.GetSection("sync");
+
+            foreach (var type in types)
+            {
+                var section = baseSection.GetSection(type.Name);
+                if (!section.Exists())
+                    throw new Exception($"Could not find section for {type.Name} in configuration");
+                var config = section.Get(type);
+                
+                if (config is IPostProcessConfig postProcessor)
+                    postProcessor.PostProcess();
+                services.AddSingleton(type, config);
+            }
         }
 
         private static string FindRoot()

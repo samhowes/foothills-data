@@ -1,0 +1,57 @@
+sync:
+  groupsConfig:
+    defaultChannel: Belonging & Community
+    ignoreTagName: Ignore
+  notesConfig:
+    categories:
+    - categories:
+      - 230 # pastoral notes => do not copy
+      activityType: Caring Contact
+      channel: Caring
+      weight: 3
+      copyContent: false
+
+    - categories:
+      - 225
+      activityName: Caring Contact
+      channel: Caring
+      weight: 3
+      copyContent: true
+
+    - categories:
+      - 148408
+      activityType: Caring Kit
+      channel: Caring
+      title: A Caring Kit was delivered
+      weight: 4
+      copyContent: true
+
+    - categories:
+      - 9955
+      activityType: Meal Train
+      channel: Caring
+      title: A meal train was set up
+      weight: 5
+      copyContent: true
+
+    - categories:
+      - 224
+      - 51351
+      activityType: Information Update
+      channel: Communication
+      weight: 1
+      copyContent: true
+
+    - categories:
+      - 269
+      - 44571
+      activityType: Serving Interest
+      channel: Serving
+      weight: 1
+      copyContent: true
+        
+        
+        
+  
+    
+    

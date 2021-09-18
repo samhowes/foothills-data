@@ -92,24 +92,19 @@ namespace Sync
 
         public PlanningCenterClient PlanningCenterClient { get; }
 
-        protected EventWaitHandle ActivityDownloadHandle { get; set; }
         protected Dictionary<string, ActivityLoader> OrbitInfo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public virtual async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
         {
-            ActivityDownloadHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
             if (_config.Mode == SyncMode.Update)
             {
-                foreach (var mapping in ActivityTypes)
-                {
-                    var loader = new ActivityLoader(mapping.ActivityType, Deps, _orbitClient);
-                    
-                    OrbitInfo[mapping.ActivityType] = loader;
-                    await loader.InitAsync();
-                }
+                var type = typeof(TSource).Name;
+                var loader = new ActivityLoader(type, Deps, _orbitClient);
+                
+                OrbitInfo[type] = loader;
+                await loader.InitAsync();
             }
 
-            // return Task.FromResult<DocumentRoot<List<TSource>>>(null!);
             return new DocumentRoot<List<TSource>>();
         }
 
@@ -128,7 +123,7 @@ namespace Sync
                     Uid = personId
                 };
                 OrbitInfo? info = null;
-                if (OrbitInfo.TryGetValue(activity.ActivityType, out var loader))
+                if (OrbitInfo.TryGetValue(typeof(TSource).Name, out var loader))
                 {
                     info = await loader.GetUntil(occurredAt);
                 }

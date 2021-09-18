@@ -18,18 +18,18 @@ namespace Sync
     
     public class GroupsConfig
     {
-        public const string DefaultChannel = "Belonging & Community";
-        public const string IgnoreTag = "Belonging & Community";
+        public string DefaultChannel { get; set; } = null!;
+        public string IgnoreTagName { get; set; } = null!;
     }
 
     public abstract class GroupSync<TSource> : Sync<TSource> where TSource : EntityBase
     {
-        protected readonly GroupsClient _groupsClient;
+        protected readonly GroupsClient GroupsClient;
         private readonly GroupsConfig _groupsConfig;
 
         protected GroupSync(SyncDeps deps, GroupsClient groupsClient, GroupsConfig config) : base(deps, groupsClient)
         {
-            _groupsClient = groupsClient;
+            GroupsClient = groupsClient;
             _groupsConfig = config;
         }
 
@@ -37,44 +37,44 @@ namespace Sync
         
         public override async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
         {
-            var channelTags = await _groupsClient.GetAsync<List<Tag>>("tag_groups/417552/tags");
+            var channelTags = await GroupsClient.GetAsync<List<Tag>>("tag_groups/417552/tags");
 
-            Channels = channelTags.Data.ToDictionary(t => t.Id);
+            _channels = channelTags.Data.ToDictionary(t => t.Id!);
 
-            IgnoreTag = Channels.Values.SingleOrDefault(t => t.Name == "Ignore")!;
-            if (IgnoreTag == null)
+            _ignoreTag = _channels.Values.SingleOrDefault(t => t.Name == _groupsConfig.IgnoreTagName)!;
+            if (_ignoreTag == null)
             {
                 throw new PlanningCenterException(
-                    $"Failed to find the `{GroupsConfig.IgnoreTag}` tag. Found {string.Join(",", Channels.Values.Select(t => t.Name))}");
+                    $"Failed to find the `{_groupsConfig.IgnoreTagName}` tag. Found {string.Join(",", _channels.Values.Select(t => t.Name))}");
             }
             
-            return await _groupsClient.GetAsync<List<TSource>>(nextUrl ?? Endpoint);
+            return await GroupsClient.GetAsync<List<TSource>>(nextUrl ?? Endpoint);
         }
 
-        protected Tag IgnoreTag;
+        private Tag _ignoreTag = null!;
 
-        protected Dictionary<string,Tag> Channels { get; set; }
+        private Dictionary<string,Tag> _channels = null!;
 
         protected async Task<GroupInfo> GetGroupInfo(string groupId)
         {
             return await Deps.Cache.GetOrAddEntity(groupId, async (_) =>
             {
-                var groupDocument = await _groupsClient.GetAsync<GroupInfo>($"groups/{groupId}");
+                var groupDocument = await GroupsClient.GetAsync<GroupInfo>($"groups/{groupId}");
                 var group = groupDocument.Data!;
-                var tagsDocument = await _groupsClient.GetAsync<List<Tag>>(group.Links["tags"].Href);
+                var tagsDocument = await GroupsClient.GetAsync<List<Tag>>(group.Links["tags"].Href);
                 group.Tags = tagsDocument.Data;
                 foreach (var tag in group.Tags)
                 {
-                    if (tag.Id == IgnoreTag.Id)
+                    if (tag.Id == _ignoreTag.Id)
                         group.Ignore = true;
-                    if (Channels.TryGetValue(tag.Id, out var chanelTag))
+                    if (_channels.TryGetValue(tag.Id!, out var chanelTag))
                     {
                         group.Channel = chanelTag.Name.Trim();
                         break;
                     }
                 }
 
-                group.Channel ??= GroupsConfig.DefaultChannel;
+                group.Channel ??= _groupsConfig.DefaultChannel;
                 return group;
             });
         }

@@ -35,7 +35,7 @@ namespace Sync
             
             var eventAppLink = $"{OrbitUtil.GroupLink(group)}/events/{@event.Id}";
             
-            var batches = _groupsClient.GetAllAsync<List<Attendance>>($"events/{@event.Id}/attendances");
+            var batches = GroupsClient.GetAllAsync<List<Attendance>>($"events/{@event.Id}/attendances");
 
             var titleSuffix = @event.Name ?? $"A {@event.Group.Name} Event";
             

@@ -11,24 +11,31 @@ using Note = PlanningCenter.Api.People.Note;
 
 namespace Sync
 {
-    public record NoteCategoryInfo(string Channel, string Type, decimal Weight, string? Title, bool CopyContent,
-        params string[] Ids);
-
-    public class NotesConfig
+    public record NoteCategoryInfo
     {
-        public Dictionary<string, NoteCategoryInfo> NoteCategoryInfos { get; } = new[]
-            {
-                new NoteCategoryInfo("Caring", "Caring Contact", 3m, null, false,
-                    "230"), // pastoral notes => do not copy
-                new NoteCategoryInfo("Caring", "Caring Contact", 3m, null, true, "225"),
+        public string Channel { get; set; }
+        public string Type { get; set; }
+        public decimal Weight { get; set; }
+        public string? Title { get; set; }
+        public bool CopyContent { get; set; }
+        public List<string> Categories { get; set; } = new List<string>();
+    }
 
-                new NoteCategoryInfo("Caring", "Caring Kit", 4m, "A Caring Kit was delivered", true, "148408"),
-                new NoteCategoryInfo("Caring", "Meal Train", 5m, "A meal train was set up", true, "9955"),
+    public interface IPostProcessConfig
+    {
+        void PostProcess();
+    }
+    
+    public class NotesConfig : IPostProcessConfig
+    {
+        public List<NoteCategoryInfo> Categories { get; set; } = null!;
+        public Dictionary<string,NoteCategoryInfo> CategoriesDict { get; set; } = null!;
 
-                new NoteCategoryInfo("Communication", "Information Update", 1m, null, true, "224", "51351"),
-                new NoteCategoryInfo("Serving", "Serving Interest", 1m, null, true, "269", "44571"),
-            }.SelectMany(nc => nc.Ids.Select(id => (key: id, value: nc)))
-            .ToDictionary(p => p.key, p => p.value);
+        public void PostProcess()
+        {
+            CategoriesDict = Categories.SelectMany(nc => nc.Categories.Select(id => (key: id, value: nc)))
+                .ToDictionary(p => p.key, p => p.value);
+        }
     }
 
     public class NotesToActivitiesSync : Sync<Note>
@@ -45,13 +52,21 @@ namespace Sync
 
         public override async Task<DocumentRoot<List<Note>>> GetInitialDataAsync(string? nextUrl)
         {
-            return await _peopleClient.GetAsync<List<Note>>(nextUrl ?? "notes");
+            await base.GetInitialDataAsync(nextUrl);
+            
+            if (nextUrl != null)
+            {
+                return await _peopleClient.GetAsync<List<Note>>(nextUrl);
+            }
+
+            return await _peopleClient.GetAsync<List<Note>>("notes",
+                ("order", "-created_at"));
         }
 
         public override async Task ProcessBatchAsync(Progress progress, Note note)
         {
             LastDate = note.CreatedAt;
-            if (!_config.NoteCategoryInfos.TryGetValue(note.NoteCategory.Id!, out var categoryInfo))
+            if (!_config.CategoriesDict.TryGetValue(note.NoteCategory.Id!, out var categoryInfo))
             {
                 Log.Debug("Ignoring note with category {NoteCategoryId}", note.NoteCategory.Id);
                 progress.Skipped++;
