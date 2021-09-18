@@ -7,7 +7,7 @@ namespace PlanningCenter.Api.CheckIns
         public string Name { get; set; }
         public string Kind { get; set; }
         public string Opened { get; set; }
-        public string Questions { get; set; }
+        // public string Questions { get; set; }
         public string AgeMinInMonths { get; set; }
         public string AgeMaxInMonths { get; set; }
         public string AgeRangeBy { get; set; }

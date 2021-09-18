@@ -20,20 +20,22 @@ namespace Sync
         static async Task Main(string[] args)
         {
             var workspaceSlug = "sam-workspace";
-            var root = FindRoot();
+            
             var services = new ServiceCollection();
             services
                 .AddPlanningCenter()
                 .AddOrbitApi(workspaceSlug);
 
+            var root = FindRoot();
+
+            services.AddSingleton(new FilesConfig() {Root = root});
+            
             var log = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console()
                 .WriteTo.File(Path.Combine(root, "sync.log"))
                 .CreateLogger();
             services.AddSingleton<ILogger>(log);
-            var db = await GetLog(root);
-            services.AddSingleton(db);
 
             services.AddSingleton<Synchronizer>();
             
@@ -45,8 +47,12 @@ namespace Sync
             services.AddTransient<DonationsToActivitiesSync>();
 
             LoadConfigs(services,
+                typeof(CheckInsConfig),
                 typeof(GroupsConfig),
                 typeof(NotesConfig));
+            
+            var db = await GetLog(root);
+            services.AddSingleton(db);
             
             services.AddTransient<GroupAttendanceSync>();
             
@@ -56,11 +62,6 @@ namespace Sync
 
             services.AddSingleton(new SyncConfig(0));
             
-            // todo(#15) remove this config
-            services.AddSingleton(new CheckInsToActivitiesSyncConfig());
-            services.AddSingleton(new CheckInsToActivitiesSyncConfig(
-                @params: ("order", "-created_at")));
-
             services.AddSingleton(new DonationsConfig()
             {
                 ExcludedFundIds = new HashSet<string>(new[]
@@ -78,10 +79,10 @@ namespace Sync
             try
             {
                 // await sync.PeopleToMembers();
-                // await sync.CheckInsToActivities();
+                await sync.CheckInsToActivities();
                 // await sync.DonationsToActivities();
                 
-                await sync.GroupAttendanceToActivities();
+                // await sync.GroupAttendanceToActivities();
                 // await sync.GroupToActivities();
                 
                 // await sync.NotesToActivities();
@@ -132,7 +133,7 @@ namespace Sync
         {
             var options = new DbContextOptionsBuilder<LogDbContext>();
             
-            if (false)
+            if (true)
             {
                 var connection = new SqliteConnection("Data Source=:memory:");
                 await connection.OpenAsync();
@@ -149,5 +150,10 @@ namespace Sync
             
             return log;
         }
+    }
+
+    public class FilesConfig
+    {
+        public string Root { get; set; }
     }
 }

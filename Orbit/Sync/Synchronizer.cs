@@ -112,6 +112,8 @@ namespace Sync
                 {
                     await impl.ProcessBatchAsync(batchStats, item);
                 }
+
+                await impl.AfterEachBatchAsync();
                 
                 progress.TotalTime += progress.Timer.ElapsedMilliseconds;
                 Report(impl, batchStats, progress, batch);

@@ -1,3 +1,4 @@
+using System;
 using System.Text.RegularExpressions;
 using JsonApi;
 
@@ -29,6 +30,13 @@ namespace Sync
         {
             var cleaned = Regex.Replace(channel.Replace(' ', '-'), @"([&])", "");
             return $"channel:{cleaned}";
+        }
+
+        public const string DateFormatString = "yyyy-MM-ddTHH:mm:ssZ";
+        
+        public static string FormatDate(DateTime dateTime)
+        {
+            return dateTime.ToUniversalTime().ToString(DateFormatString);
         }
     }
 }

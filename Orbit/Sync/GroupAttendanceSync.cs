@@ -17,7 +17,7 @@ namespace Sync
         public override string To => "Activity";
         // start with the most recent events, but don't get events in the future
         protected override string Endpoint 
-            => $"events?order=-starts_at&where[starts_at][lt]={DateTime.Now.ToUniversalTime():yyyy-MM-ddTHH:mm:ssZ})";
+            => $"events?order=-starts_at&where[starts_at][lt]={OrbitUtil.FormatDate(DateTime.Now)})";
 
         public override async Task ProcessBatchAsync(Progress progress, Event @event)
         {

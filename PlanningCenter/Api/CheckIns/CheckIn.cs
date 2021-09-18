@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
@@ -12,7 +13,7 @@ namespace PlanningCenter.Api.CheckIns
         public string Kind { get; set; }
         public string Number { get; set; }
         public string SecurityCode { get; set; }
-        public string CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public string CheckedOutAt { get; set; }
         public string EmergencyContactName { get; set; }
@@ -22,5 +23,6 @@ namespace PlanningCenter.Api.CheckIns
         public Person? Person { get; set; }
         
         public Relationship<List<EventTime>> EventTimes { get; set; }
+        public Relationship<List<Location>> Locations { get; set; }
     }
 }

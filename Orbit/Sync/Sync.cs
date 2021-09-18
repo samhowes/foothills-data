@@ -262,5 +262,7 @@ namespace Sync
         }
         
         public string LastDate { get; set; }
+
+        public virtual Task AfterEachBatchAsync() => Task.CompletedTask;
     }
 }
