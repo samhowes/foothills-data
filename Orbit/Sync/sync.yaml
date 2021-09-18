@@ -2,6 +2,8 @@ sync:
   groupsConfig:
     defaultChannel: Belonging & Community
     ignoreTagName: Ignore
+    channelTagGroupId: 417552
+    clean: true
   notesConfig:
     categories:
     - categories:

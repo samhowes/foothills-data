@@ -1,3 +1,5 @@
+using JsonApi;
+
 namespace PlanningCenter.Api.CheckIns
 {
     public class Option : EntityBase

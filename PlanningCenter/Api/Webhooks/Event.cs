@@ -1,3 +1,5 @@
+using JsonApi;
+
 namespace PlanningCenter.Api.Webhooks
 {
     public class Event : EntityBase

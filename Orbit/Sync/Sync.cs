@@ -246,6 +246,21 @@ namespace Sync
             }
         }
 
+        public async Task CleanActivitiesAsync(string channel)
+        {
+            channel = OrbitUtil.ChannelTag(channel);
+            
+            var batches = _orbitClient.GetAllAsync<List<CustomActivity>>(
+                $"activities?items=100&direction=DESC&sort=occurred_at&activity_tags={channel}");
+            await foreach (var batch in batches)
+            {
+                foreach (var activity in batch.Data)
+                {
+                    await _orbitClient.Delete($"activities/{activity.Id}");
+                }
+            }
+        }
+        
         public string LastDate { get; set; }
     }
 }

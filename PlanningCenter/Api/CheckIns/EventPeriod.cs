@@ -1,4 +1,5 @@
 using System;
+using JsonApi;
 
 namespace PlanningCenter.Api.CheckIns
 {

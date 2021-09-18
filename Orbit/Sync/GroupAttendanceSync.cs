@@ -15,6 +15,7 @@ namespace Sync
         }
 
         public override string To => "Activity";
+        // start with the most recent events, but don't get events in the future
         protected override string Endpoint 
             => $"events?order=-starts_at&where[starts_at][lt]={DateTime.Now.ToUniversalTime():yyyy-MM-ddTHH:mm:ssZ})";
 
@@ -33,7 +34,7 @@ namespace Sync
                 return;
             }
             
-            var eventAppLink = $"{OrbitUtil.GroupLink(group)}/events/{@event.Id}";
+            var eventAppLink = $"{PlanningCenterUtil.GroupLink(group)}/events/{@event.Id}";
             
             var batches = GroupsClient.GetAllAsync<List<Attendance>>($"events/{@event.Id}/attendances");
 
@@ -58,7 +59,7 @@ namespace Sync
                         "Event"
                     );
 
-                    await UploadActivity(progress, attendance, activity, attendance.Person.Id);
+                    await UploadActivity(progress, attendance, activity, attendance.Person.Id!);
                     
                 }
             }

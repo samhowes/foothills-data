@@ -44,10 +44,10 @@ namespace Sync
             services.AddTransient<CheckInsToActivitiesSync>();
             services.AddTransient<DonationsToActivitiesSync>();
 
-            LoadConfigs(services, 
+            LoadConfigs(services,
+                typeof(GroupsConfig),
                 typeof(NotesConfig));
             
-            services.AddSingleton(new GroupsConfig());
             services.AddTransient<GroupAttendanceSync>();
             
             services.AddTransient<MembershipSync>();
@@ -81,10 +81,10 @@ namespace Sync
                 // await sync.CheckInsToActivities();
                 // await sync.DonationsToActivities();
                 
-                // await sync.GroupAttendanceToActivities();
+                await sync.GroupAttendanceToActivities();
                 // await sync.GroupToActivities();
                 
-                await sync.NotesToActivities();
+                // await sync.NotesToActivities();
                 
             }
             catch (Exception e)

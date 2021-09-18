@@ -1,3 +1,5 @@
+using JsonApi;
+
 namespace PlanningCenter.Api.Calendar
 {
     public class TagGroup : EntityBase

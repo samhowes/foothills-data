@@ -1,6 +1,4 @@
-using System;
 using System.Threading.Tasks;
-using JsonApi;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using PlanningCenter.Api.Groups;
@@ -32,7 +30,7 @@ namespace Sync
                 membership.JoinedAt,
                 6m,
                 $"Joined Group {group.Name}",
-                OrbitUtil.GroupLink(group),
+                PlanningCenterUtil.GroupLink(group),
                 group.Name);
 
             await UploadActivity(progress, membership, activity, membership.Person.Id!);

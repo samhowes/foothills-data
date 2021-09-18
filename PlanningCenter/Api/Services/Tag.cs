@@ -1,3 +1,5 @@
+using JsonApi;
+
 namespace PlanningCenter.Api.Services
 {
     public class Tag : EntityBase

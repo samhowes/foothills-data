@@ -1,6 +1,6 @@
 using JsonApiSerializer.JsonApi;
 
-namespace PlanningCenter.Api
+namespace JsonApi
 {
     public class EntityBase
     {

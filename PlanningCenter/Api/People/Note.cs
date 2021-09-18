@@ -1,3 +1,4 @@
+using JsonApi;
 using Newtonsoft.Json;
 
 namespace PlanningCenter.Api.People

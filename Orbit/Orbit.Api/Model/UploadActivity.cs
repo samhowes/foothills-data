@@ -13,6 +13,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Globalization;
 using Humanizer;
+using Sync;
 
 namespace Orbit.Api.Model
 {
@@ -56,7 +57,7 @@ namespace Orbit.Api.Model
             // functional fields
             Tags = tags.Concat(new []
             {
-                $"channel:{channel}",
+                OrbitUtil.ChannelTag(channel),
             }).ToList();
             ActivityType = type;
             Key = key;

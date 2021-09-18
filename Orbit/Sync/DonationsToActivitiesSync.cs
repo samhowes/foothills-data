@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
@@ -8,12 +7,6 @@ using PlanningCenter.Api.Giving;
 
 namespace Sync
 {
-    public static class PlanningCenterUtil
-    {
-        public static string DonationLink(Donation donation) =>
-            $"https://giving.planningcenteronline.com/donations/{donation.Id}";
-    }
-    
     public static class ActivityType
     {
         public const string Donation = "Donation";
