@@ -89,6 +89,7 @@ namespace Orbit.Api
         }
 
         public record AddActivity(UploadActivity Activity, OtherIdentity Identity);
+        
         public async Task CreateActivity(UploadActivity uploadActivity, OtherIdentity identity)
         {
             var created = await PostAsync<DocumentRoot<UploadActivity>>("activities", 

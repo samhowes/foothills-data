@@ -27,23 +27,7 @@ namespace Sync
         Stop
     }
 
-    public abstract class ActivityMapping
-    {
-        protected ActivityMapping(string activityType)
-        {
-            ActivityType = activityType;
-        }
-
-        public string ActivityType { get; }
-    }
-
-    public class ActivityMapping<TEntity> : ActivityMapping where TEntity : EntityBase
-    {
-        public ActivityMapping(string activityType) : base(activityType)
-        {
-        }
-    }
-
+    // ReSharper disable once ClassNeverInstantiated.Global
     public record SyncImplConfig
     {
         public bool ShouldDelete { get; set; }
@@ -92,6 +76,9 @@ namespace Sync
             _logDb = deps.LogDb;
             PlanningCenterClient = planningCenterClient;
         }
+        
+        public string LastDate { get; set; }
+        public virtual SyncType SyncType => SyncType.TopLevel;
 
         protected SyncDeps Deps { get; }
         public string From => typeof(TSource).Name;
@@ -229,9 +216,11 @@ namespace Sync
         protected async Task<string?> CreateMemberAsync(Person person)
         {
             var tags = new List<string>();
-            if (person.Child == "true")
-                tags.Add("child");
-
+            if (person.Membership.Contains("(Child)", StringComparison.OrdinalIgnoreCase))
+            {
+                person.Child = true;
+            }
+            
             var member = new UpsertMember()
             {
                 Birthday = person.Birthdate,
@@ -240,10 +229,9 @@ namespace Sync
                 TagsToAdd = string.Join(",", tags),
                 Identity = new OtherIdentity(source: Constants.PlanningCenterSource)
                 {
-                    Email = $"{person.Id}@foothillsuu.org",
                     Name = person.Name,
                     Uid = person.Id,
-                    Url = person.Links.Self()!,
+                    Url = PlanningCenterUtil.PersonLink(person.Id!),
                 }
             };
 
@@ -284,8 +272,6 @@ namespace Sync
             }
         }
         
-        public string LastDate { get; set; }
-
         public virtual Task AfterEachBatchAsync() => Task.CompletedTask;
     }
 }

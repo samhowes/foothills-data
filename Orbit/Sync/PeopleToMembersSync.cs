@@ -46,13 +46,20 @@ namespace Sync
             await _csv.WriteLineAsync(string.Join(",", new[]
             {
                 person.Name,
-                person.Child,
+                person.Child.ToString(),
                 person.Membership,
                 person.Status,
             }));
             
+            
             // await CreateMemberAsync(person);
             progress.Success++;
+        }
+
+        public override async Task AfterEachBatchAsync()
+        {
+            await base.AfterEachBatchAsync();
+            await _csv.FlushAsync();
         }
     }
 }
