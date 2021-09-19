@@ -33,17 +33,17 @@ namespace Sync
         }
 
         
-        public async Task<PlanningCenterCursor<Event>> InitializeTopLevelAsync(SyncContext context)
+        public async Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
         {
             _context = context;
             await _groupSync.InitializeAsync();
             var url = context.NextUrl ?? UrlUtil.MakeUrl("events",
                 ("order", "-starts_at"),
                 ("where[starts_at][lt]", OrbitUtil.FormatDate(DateTime.Now)));
-            return new PlanningCenterCursor<Event>(_groupsClient, url);
+            return new ApiCursor<Event>(_groupsClient, url);
         }
         
-        public async Task<PlanningCenterCursor<Attendance>?> InitializeAsync(SyncContext context)
+        public async Task<ApiCursor<Attendance>?> InitializeAsync(SyncContext context)
         {
             var @event = context.GetData<Event>();
             if (@event.Canceled)
@@ -60,7 +60,7 @@ namespace Sync
             }
 
             _context.SetData(group);
-            return new PlanningCenterCursor<Attendance>(_groupsClient, $"events/{@event.Id}/attendances", $"{group.Name}:Attendance");
+            return new ApiCursor<Attendance>(_groupsClient, $"events/{@event.Id}/attendances", $"{group.Name}:Attendance");
         }
 
         public async Task ProcessItemAsync(Attendance attendance)

@@ -32,7 +32,7 @@ namespace Sync
             _deps = deps;
         }
 
-        public Task<PlanningCenterCursor<Donation>> InitializeAsync(SyncContext context)
+        public Task<ApiCursor<Donation>> InitializeAsync(SyncContext context)
         {
             _context = context;
             var url = _context.NextUrl ?? UrlUtil.MakeUrl("donations",
@@ -40,7 +40,7 @@ namespace Sync
                 ("order", "-created_at"),
                 ("succeeded", "true"));
 
-            return Task.FromResult(new PlanningCenterCursor<Donation>(_givingClient, url));
+            return Task.FromResult(new ApiCursor<Donation>(_givingClient, url));
         }
 
         public async Task ProcessItemAsync(Donation donation)
