@@ -14,7 +14,7 @@ namespace PlanningCenter.Api.CheckIns
         public string VolunteerCount { get; set; }
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
         public Event Event { get; set; }
         public string EventPeriodId { get; set; }
         public EventPeriod EventPeriod { get; set; }

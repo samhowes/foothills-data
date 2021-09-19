@@ -24,11 +24,17 @@ namespace JsonApi
             if (parameters.Length > 0)
             {
                 url.Append("?");
-                foreach (var param in parameters)
+
+                for (var i = 0; i < parameters.Length; i++)
                 {
+                    var param = parameters[i];
                     url.AppendFormat("{0}={1}",
                         HttpUtility.UrlEncode(param.key),
                         HttpUtility.UrlEncode(param.value));
+                    if (i < parameters.Length - 1)
+                    {
+                        url.Append("&");
+                    }
                 }
             }
 

@@ -52,8 +52,8 @@ namespace Sync
             _log.Information("Starting sync...");
             try
             {
-                await PeopleToMembers();
-                // await sync.CheckInsToActivities();
+                // await PeopleToMembers();
+                await CheckInsToActivities();
                 // await sync.DonationsToActivities();
 
                 // await GroupAttendanceToActivities();
@@ -92,7 +92,7 @@ namespace Sync
         public async Task CheckInsToActivities()
         {
             var impl = _services.GetRequiredService<CheckInsToActivitiesSync>();
-            await Sync(impl);
+            await MultiSync(impl);
         }
         
         public async Task GroupAttendanceToActivities()
@@ -123,17 +123,18 @@ namespace Sync
                 context.OverallProgress.Timer.Start();
                 for (;;)
                 {
-                    foreach (var topLevel in topCursor.Data)
+                    foreach (var topLevel in topCursor!.Data!)
                     {
-                        context.SetData(topLevel);
-                        var cursor = await impl.InitializeAsync(context);
+                        var childContext = context.MakeChild();
+                        childContext.SetData(topLevel);
+                        var cursor = await impl.InitializeAsync(childContext);
                         if (cursor == null) continue;
                             
                         await cursor.InitializeAsync();
                         var thisCount = cursor.Meta.TotalCount();
                         _log.Information("{CursorName} has {ThisCount} records", cursor.Name, thisCount);
-                    
-                        await ProcessCursorAsync(impl, cursor, context);
+                        
+                        await ProcessCursorAsync(impl, cursor, childContext);
                     }
 
                     if (!await topCursor.FetchNextAsync()) break;
@@ -256,12 +257,26 @@ namespace Sync
 
     public class SyncContext
     {
+        private readonly Dictionary<object, object> _data;
+        private SyncContext(Dictionary<object, object> data)
+        {
+            _data = new Dictionary<object, object>(data);
+        }
+        public SyncContext() : this(new Dictionary<object, object>())
+        {
+            
+        }
+        
         public string? NextUrl { get; set; }
         public Progress OverallProgress { get; set; }
         public Progress BatchProgress { get; set; }
 
         public void SetData<T>(T data) => _data[typeof(T)] = data!; 
-        public T GetData<T>() => (T)_data[typeof(T)]!; 
-        private readonly Dictionary<object, object> _data = new();
+        public T GetData<T>() => (T)_data[typeof(T)]!;
+
+        public SyncContext MakeChild()
+        {
+            return new SyncContext(_data){OverallProgress = OverallProgress};
+        }
     }
 }
