@@ -71,6 +71,7 @@ namespace Sync
                     );
 
                     await UploadActivity(progress, attendance, activity, attendance.Person.Id!);
+                    if (progress.Complete) return;
                 }
             }
         }

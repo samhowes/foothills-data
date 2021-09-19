@@ -18,6 +18,14 @@ namespace Sync
         Create,
         Update
     }
+    
+    public enum KeyExistsMode
+    {
+        // ignore key exists errors and continue uploading
+        Skip,
+        // assume we have finished uploading new data and stop uploading
+        Stop
+    }
 
     public abstract class ActivityMapping
     {
@@ -40,6 +48,8 @@ namespace Sync
     {
         public bool ShouldDelete { get; set; }
         public SyncMode Mode { get; set; } = SyncMode.Update;
+
+        public KeyExistsMode KeyExistsMode { get; set; } = KeyExistsMode.Stop;
 
     }
 
@@ -84,8 +94,6 @@ namespace Sync
         }
 
         protected SyncDeps Deps { get; }
-
-        protected virtual List<ActivityMapping> ActivityTypes { get; } = new();
         public string From => typeof(TSource).Name;
         public virtual string To => "Activity";
 
@@ -146,9 +154,21 @@ namespace Sync
                 {
                     if (ex.Message.Contains("has already been taken"))
                     {
-                        Log.Debug("Skipping already uploaded activity");
-                        progress.Skipped++;
-                        return;
+                        switch (_config.KeyExistsMode)
+                        {
+                            case KeyExistsMode.Stop:
+                                Log.Information("Key {ActivityKey} already exists, assuming upload complete",
+                                    activity.Key);
+                                progress.Complete = true;
+                                return;
+                            
+                            case KeyExistsMode.Skip:
+                            default:
+                                Log.Debug("Skipping already uploaded activity");
+                                progress.Skipped++;
+                                return;
+                        }
+                        
                     }
 
                     Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", source.Id,

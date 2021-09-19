@@ -88,6 +88,7 @@ namespace Sync
                 );
                 
                 await UploadActivity(progress, designation, activity, donation.Person.Id!);
+                if (progress.Complete) return;
             }
         }
     }

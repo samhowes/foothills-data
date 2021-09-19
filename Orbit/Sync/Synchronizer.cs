@@ -110,6 +110,8 @@ namespace Sync
                 foreach (var item in batch.Data)
                 {
                     await impl.ProcessBatchAsync(batchStats, item);
+                    
+                    if (batchStats.Complete) break;
                 }
 
                 await impl.AfterEachBatchAsync();
@@ -125,7 +127,7 @@ namespace Sync
                 }
 
                 var nextUrl = batch.Links.Next();
-                if (string.IsNullOrEmpty(nextUrl)) break;
+                if (batchStats.Complete || string.IsNullOrEmpty(nextUrl)) break;
 
                 batch = await impl.PlanningCenterClient.GetAsync<List<TSource>>(nextUrl);
 

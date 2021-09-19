@@ -120,6 +120,7 @@ namespace Sync
                     );
 
                     await UploadActivity(progress, checkIn, activity, checkIn.Person.Id!);
+                    if (progress.Complete) return;
                 }
                 
                 // if (eventId != _worship.Id)
