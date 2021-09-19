@@ -9,5 +9,8 @@ namespace PlanningCenter.Api
             $"https://giving.planningcenteronline.com/donations/{donation.Id}";
         public static string GroupLink(Group group)
             => $"https://groups.planningcenteronline.com/groups/{group.Id}";
+
+        public static string CheckInsLink(string eventPeriodId, string checkInId)
+            => $"https://check-ins.planningcenteronline.com/event_periods/{eventPeriodId}/check_ins/{checkInId}";
     }
 }

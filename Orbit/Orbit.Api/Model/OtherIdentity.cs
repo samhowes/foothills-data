@@ -1,10 +1,3 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Runtime.Serialization;
-using Newtonsoft.Json;
-
-
 namespace Orbit.Api.Model
 {
     public class OtherIdentity

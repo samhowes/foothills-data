@@ -5,10 +5,21 @@ using PlanningCenter.Api.Groups;
 
 namespace Sync
 {
-    public class MembershipSync : GroupSync<Membership>
+    // ReSharper disable once ClassNeverInstantiated.Global
+    public class GroupMembershipConfig
     {
-        public MembershipSync(SyncDeps deps, GroupsClient groupsClient, GroupsConfig config) : base(deps, groupsClient, config)
+        public decimal Weight { get; set; }
+        public string ActivityType { get; set; } = null!;
+    }
+
+    public class GroupMembershipSync : GroupSync<Membership>
+    {
+        private readonly GroupMembershipConfig _membershipConfig;
+
+        public GroupMembershipSync(SyncDeps deps, GroupsClient groupsClient, GroupConfig config,
+            GroupMembershipConfig membershipConfig) : base(deps, groupsClient, config)
         {
+            _membershipConfig = membershipConfig;
         }
 
         protected override string Endpoint => "membership";
@@ -25,10 +36,10 @@ namespace Sync
 
             var activity = new UploadActivity(
                 group.Channel!,
-                "Group Attendance",
+                _membershipConfig.ActivityType,
                 OrbitUtil.ActivityKey(membership),
                 membership.JoinedAt,
-                6m,
+                _membershipConfig.Weight,
                 $"Joined Group {group.Name}",
                 PlanningCenterUtil.GroupLink(group),
                 group.Name);

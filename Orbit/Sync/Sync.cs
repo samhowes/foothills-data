@@ -1,17 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
-using Microsoft.EntityFrameworkCore.Storage;
 using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using Serilog;
-using Polly;
 using Person = PlanningCenter.Api.People.Person;
 
 namespace Sync
@@ -39,9 +36,11 @@ namespace Sync
         }
     }
 
-    public record SyncImplConfig(SyncMode Mode = SyncMode.Create)
+    public record SyncImplConfig
     {
         public bool ShouldDelete { get; set; }
+        public SyncMode Mode { get; set; } = SyncMode.Update;
+
     }
 
     public class SyncDeps
@@ -250,14 +249,18 @@ namespace Sync
         {
             channel = OrbitUtil.ChannelTag(channel);
             
-            var batches = _orbitClient.GetAllAsync<List<CustomActivity>>(
-                $"activities?items=100&direction=DESC&sort=occurred_at&activity_tags={channel}");
-            await foreach (var batch in batches)
+            Log.Information("Cleaning {Channel}", channel);
+            for (;;)
             {
+                var batch = await _orbitClient.GetAsync<List<CustomActivity>>(
+                    $"activities?items=100&direction=DESC&sort=occurred_at&activity_tags={channel}");
+                if (!batch.Data.Any()) break;
+                Log.Information("{Date:MM/dd/yyyy}", DateTime.Parse(batch.Data.First().OccurredAt));
                 foreach (var activity in batch.Data)
                 {
-                    await _orbitClient.Delete($"activities/{activity.Id}");
+                    await _orbitClient.Delete($"members/{activity.Member.Slug}/activities/{activity.Id}");
                 }
+                
             }
         }
         

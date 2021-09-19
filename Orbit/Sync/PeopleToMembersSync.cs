@@ -1,13 +1,9 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Threading.Tasks;
-using JsonApi;
 using JsonApiSerializer.JsonApi;
-using Microsoft.EntityFrameworkCore;
-using Orbit.Api.Model;
 using PlanningCenter.Api;
-using PlanningCenter.Api.CheckIns;
+using PlanningCenter.Api.People;
 
 namespace Sync
 {
@@ -19,29 +15,44 @@ namespace Sync
     public class PeopleToMembersSync : Sync<Person>
     {
         private readonly PeopleClient _peopleClient;
-        private Dictionary<string,Mapping> _existing = null!;
-        private DocumentRoot<List<Person>> _people = null!;
-        
-        public PeopleToMembersSync(PeopleClient peopleClient, SyncDeps deps)
+        private readonly FilesConfig _filesConfig;
+        private StreamWriter _csv = null!;
+
+        public PeopleToMembersSync(PeopleClient peopleClient, SyncDeps deps, FilesConfig filesConfig)
             : base(deps, peopleClient)
         {
             _peopleClient = peopleClient;
+            _filesConfig = filesConfig;
         }
 
         public override string To => "Members";
 
         public override async Task<DocumentRoot<List<Person>>> GetInitialDataAsync(string? nextUrl)
         {
-            _people = await _peopleClient.GetAsync<List<Person>>(nextUrl ?? "people");
-            _existing = await Deps.LogDb.Mappings
-                .Where(m => m.Type == nameof(Person))
-                .ToDictionaryAsync(m => m.PlanningCenterId!);
-            return _people;
+            await base.GetInitialDataAsync(nextUrl);
+            var csv = new FileInfo(Path.Combine(_filesConfig.Root, "people.csv"));
+            if (csv.Exists)
+                csv.Delete();
+            
+            _csv = new StreamWriter(csv.OpenWrite());
+            await _csv.WriteLineAsync("Name,Child,Membership,Status");
+            var batch = await _peopleClient.GetAsync<List<Person>>(nextUrl ?? "people", 
+                ("order", "-created_at"));
+            return batch;
         }
 
         public override async Task ProcessBatchAsync(Progress progress, Person person)
         {
+            await _csv.WriteLineAsync(string.Join(",", new[]
+            {
+                person.Name,
+                person.Child,
+                person.Membership,
+                person.Status,
+            }));
             
+            // await CreateMemberAsync(person);
+            progress.Success++;
         }
     }
 }

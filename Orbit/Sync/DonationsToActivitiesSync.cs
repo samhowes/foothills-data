@@ -4,41 +4,30 @@ using JsonApiSerializer.JsonApi;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using PlanningCenter.Api.Giving;
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace Sync
 {
-    public static class ActivityType
+    public record DonationsConfig 
     {
-        public const string Donation = "Donation";
-    }
-    public record DonationsConfig : SyncImplConfig
-    {
-        public HashSet<string>? ExcludedFundIds { get; init; }
-    }
-
-    public class PlanningCenterCache
-    {
-        public Dictionary<string, Fund> Funds { get; } = new();
+        public string ActivityType { get; set; } = null!;
+        public HashSet<string> ExcludedFundIds { get; set; } = null!;
+        public string Channel { get; set; } = null!;
+        public decimal Weight { get; set; }
     }
 
     public class DonationsToActivitiesSync : Sync<Donation>
     {
         private readonly GivingClient _givingClient;
-        private readonly DonationsConfig _config;
-        private readonly PlanningCenterCache _cache = new();
+        private readonly DonationsConfig _donationsConfig;
 
         public DonationsToActivitiesSync(
-            GivingClient givingClient, DonationsConfig config, SyncDeps deps)
+            GivingClient givingClient, DonationsConfig donationsConfig, SyncDeps deps)
             : base(deps, givingClient)
         {
             _givingClient = givingClient;
-            _config = config;
+            _donationsConfig = donationsConfig;
         }
-
-        protected override List<ActivityMapping> ActivityTypes { get; } = new()
-        {
-            new ActivityMapping<Designation>(ActivityType.Donation)
-        };
 
         public override async Task<DocumentRoot<List<Donation>>> GetInitialDataAsync(string? nextUrl)
         {
@@ -74,27 +63,25 @@ namespace Sync
 
             foreach (var designation in donation.Designations.Data)
             {
-                if (_config.ExcludedFundIds?.Contains(designation.Fund.Id!) == true)
+                if (_donationsConfig.ExcludedFundIds?.Contains(designation.Fund.Id!) == true)
                 {
                     Deps.Log.Debug("Skipping Fund {FundId}", designation.Fund.Id);
                     progress.Skipped++;
                     continue;
                 }
 
-                if (!_cache.Funds.TryGetValue(designation.Fund.Id!, out var fund))
+                var fund = await Deps.Cache.GetOrAddEntity(designation.Fund.Id!, async (fundId) =>
                 {
-                    var fundDocument = await _givingClient.GetAsync<Fund>($"funds/{designation.Fund.Id}");
-                    fund = fundDocument.Data;
-                    _cache.Funds[fund.Id!] = fund;
-                }
+                    var fundDocument = await _givingClient.GetAsync<Fund>($"funds/{fundId}");
+                    return fundDocument.Data;
+                });
 
-                
                 var activity = new UploadActivity(
-                    "Giving",
-                    "Donation",
+                    _donationsConfig.Channel,
+                    _donationsConfig.ActivityType,
                     OrbitUtil.ActivityKey(designation),
                     donation.ReceivedAt,
-                    2m,
+                    _donationsConfig.Weight,
                     $"Donated to {fund.Name}",
                     PlanningCenterUtil.DonationLink(donation),
                     "Donation"

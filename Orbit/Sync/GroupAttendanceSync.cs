@@ -7,11 +7,22 @@ using PlanningCenter.Api.Groups;
 
 namespace Sync
 {
+    // ReSharper disable once ClassNeverInstantiated.Global
+    public class GroupAttendanceConfig
+    {
+        public string ActivityType { get; set; } = null!;
+        public decimal LeadershipWeight { get; set; }
+        public decimal NormalWeight { get; set; }
+    }
+    
     public class GroupAttendanceSync : GroupSync<Event>
     {
-        public GroupAttendanceSync(SyncDeps deps, GroupsClient groupsClient, GroupsConfig config)
+        private readonly GroupAttendanceConfig _attendanceConfig;
+
+        public GroupAttendanceSync(SyncDeps deps, GroupsClient groupsClient, GroupConfig config, GroupAttendanceConfig attendanceConfig)
             : base(deps, groupsClient, config)
         {
+            _attendanceConfig = attendanceConfig;
         }
 
         public override string To => "Activity";
@@ -50,17 +61,16 @@ namespace Sync
                     
                     var activity = new UploadActivity(
                         group.Channel!,
-                        "Group Attendance",
+                        _attendanceConfig.ActivityType,
                         OrbitUtil.ActivityKey(attendance),
                         @event.StartsAt,
-                        isLeader ? 6m : 3m, 
+                        isLeader ? _attendanceConfig.LeadershipWeight : _attendanceConfig.NormalWeight, 
                         $"{(isLeader ? "Led" : "Attended")} {titleSuffix}", 
                         eventAppLink,
                         "Event"
                     );
 
                     await UploadActivity(progress, attendance, activity, attendance.Person.Id!);
-                    
                 }
             }
         }

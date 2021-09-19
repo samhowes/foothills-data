@@ -5,7 +5,6 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PlanningCenter.Api;
 using Serilog;
 
 namespace Sync
@@ -153,7 +152,7 @@ namespace Sync
 
         public async Task GroupToActivities()
         {
-            var impl = _services.GetRequiredService<MembershipSync>();
+            var impl = _services.GetRequiredService<GroupMembershipSync>();
             await Sync(impl);
         }
     }

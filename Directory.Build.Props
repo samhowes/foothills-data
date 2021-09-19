@@ -1,0 +1,13 @@
+<Project>
+    <PropertyGroup>
+        <BazelWorkspacePath>$(MSBuildThisFileDirectory)</BazelWorkspacePath>
+        <BazelPackage>$([MSBuild]::MakeRelative($(BazelWorkspacePath), $(MSBuildProjectDirectory)).Replace('\','/'))</BazelPackage>
+        <!-- If the file is at the root, msbuild will generate a relative path to this directory, we want this to be empty -->
+        <BazelPackage Condition="$(BazelPackage.StartsWith(../))"></BazelPackage>
+
+        <Prefix>FoothillsUU</Prefix>
+        <AssemblyName>$(Prefix).$(BazelPackage.Replace('/','.'))</AssemblyName>
+        <RootNamespace>$(AssemblyName)</RootNamespace>
+    </PropertyGroup>
+
+</Project>

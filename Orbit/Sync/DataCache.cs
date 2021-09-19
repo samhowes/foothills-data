@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Humanizer;
 using JsonApi;
-using PlanningCenter.Api;
 
 namespace Sync
 {

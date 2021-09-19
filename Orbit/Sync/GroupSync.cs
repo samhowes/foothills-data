@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,7 +17,7 @@ namespace Sync
         public bool Ignore { get; set; }
     }
 
-    public class GroupsConfig
+    public class GroupConfig
     {
         public string DefaultChannel { get; set; } = null!;
         public string IgnoreTagName { get; set; } = null!;
@@ -29,12 +28,12 @@ namespace Sync
     public abstract class GroupSync<TSource> : Sync<TSource> where TSource : EntityBase
     {
         protected readonly GroupsClient GroupsClient;
-        private readonly GroupsConfig _groupsConfig;
+        private readonly GroupConfig _groupConfig;
 
-        protected GroupSync(SyncDeps deps, GroupsClient groupsClient, GroupsConfig config) : base(deps, groupsClient)
+        protected GroupSync(SyncDeps deps, GroupsClient groupsClient, GroupConfig config) : base(deps, groupsClient)
         {
             GroupsClient = groupsClient;
-            _groupsConfig = config;
+            _groupConfig = config;
         }
 
         protected abstract string Endpoint { get; }
@@ -42,14 +41,14 @@ namespace Sync
         public override async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
         {
             var channelTags =
-                await GroupsClient.GetAsync<List<Tag>>($"tag_groups/{_groupsConfig.ChannelTagGroupId}/tags");
+                await GroupsClient.GetAsync<List<Tag>>($"tag_groups/{_groupConfig.ChannelTagGroupId}/tags");
             
             Log.Information("Found {ChannelCount} channel tags: {ChannelTags}", channelTags.Data.Count,
                 channelTags.Data.Select(t => t.Name));
 
             _channels = channelTags.Data.ToDictionary(t => t.Id!);
 
-            if (_groupsConfig.Clean)
+            if (_groupConfig.Clean)
             {
                 foreach (var channel in _channels.Values)
                 {
@@ -57,11 +56,11 @@ namespace Sync
                 }
             }
 
-            _ignoreTag = _channels.Values.SingleOrDefault(t => t.Name == _groupsConfig.IgnoreTagName)!;
+            _ignoreTag = _channels.Values.SingleOrDefault(t => t.Name == _groupConfig.IgnoreTagName)!;
             if (_ignoreTag == null)
             {
                 throw new PlanningCenterException(
-                    $"Failed to find the `{_groupsConfig.IgnoreTagName}` tag. Found {string.Join(",", _channels.Values.Select(t => t.Name))}");
+                    $"Failed to find the `{_groupConfig.IgnoreTagName}` tag. Found {string.Join(",", _channels.Values.Select(t => t.Name))}");
             }
 
             return await GroupsClient.GetAsync<List<TSource>>(nextUrl ?? Endpoint);
@@ -90,7 +89,7 @@ namespace Sync
                     }
                 }
 
-                group.Channel ??= _groupsConfig.DefaultChannel;
+                group.Channel ??= _groupConfig.DefaultChannel;
                 return group;
             });
         }
