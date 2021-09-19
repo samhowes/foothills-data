@@ -50,7 +50,7 @@ namespace Sync
                 case "test":
                     return await VerifyApiAccess(provider);
                 case "sync":
-                    var sync = provider.GetRequiredService<Synchronizer>();
+                    var sync = provider.GetRequiredService<Orchestrator>();
                     return await sync.All();
                 default:
                     Console.WriteLine($"Unknown action '{command.Action}'");
@@ -100,7 +100,9 @@ namespace Sync
             services
                 .AddSingleton<ILogger>(log)
                 .AddSingleton(db)
-                .AddSingleton<Synchronizer>()
+                .AddSingleton<Orchestrator>()
+                .AddSingleton<OrbitSync>()
+                .AddSingleton<GroupSync>()
                 .AddTransient<SyncDeps>()
                 .AddSingleton<DataCache>()
                 .AddTransient<PeopleToMembersSync>()
@@ -155,7 +157,7 @@ namespace Sync
         {
             var options = new DbContextOptionsBuilder<LogDbContext>();
 
-            if (false)
+            if (true)
             {
                 var connection = new SqliteConnection("Data Source=:memory:");
                 await connection.OpenAsync();

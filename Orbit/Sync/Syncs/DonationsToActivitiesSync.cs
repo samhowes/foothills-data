@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
@@ -16,46 +17,45 @@ namespace Sync
         public decimal Weight { get; set; }
     }
 
-    public class DonationsToActivitiesSync : Sync<Donation>
+    public class DonationsToActivitiesSync : ISync<Donation>
     {
         private readonly GivingClient _givingClient;
         private readonly DonationsConfig _donationsConfig;
+        private readonly SyncDeps _deps;
+        private SyncContext _context = null!;
 
         public DonationsToActivitiesSync(
             GivingClient givingClient, DonationsConfig donationsConfig, SyncDeps deps)
-            : base(deps, givingClient)
         {
             _givingClient = givingClient;
             _donationsConfig = donationsConfig;
+            _deps = deps;
         }
 
-        public override async Task<DocumentRoot<List<Donation>>> GetInitialDataAsync(string? nextUrl)
+        public Task<PlanningCenterCursor<Donation>> InitializeAsync(SyncContext context)
         {
-            await base.GetInitialDataAsync(nextUrl);
-            
-            if (nextUrl != null)
-            {
-                return await _givingClient.GetAsync<List<Donation>>(nextUrl);
-            }
-
-            return await _givingClient.GetAsync<List<Donation>>("donations",
+            _context = context;
+            var url = _context.NextUrl ?? UrlUtil.MakeUrl("donations",
                 ("include", "designations"),
                 ("order", "-created_at"),
                 ("succeeded", "true"));
+
+            return Task.FromResult(new PlanningCenterCursor<Donation>(_givingClient, url));
         }
 
-        public override async Task ProcessBatchAsync(Progress progress, Donation donation)
+        public async Task ProcessItemAsync(Donation donation)
         {
+            var progress = _context.BatchProgress;
             if (donation.Refunded)
             {
-                Deps.Log.Debug("Ignoring refunded donation {DonationId}", donation.Id);
+                _deps.Log.Debug("Ignoring refunded donation {DonationId}", donation.Id);
                 progress.Skipped++;
                 return;
             }
 
             if (donation.Person == null)
             {
-                Deps.Log.Debug("Ignoring donation with no person attached: {DonationLink}, Batch: {BatchId}", 
+                _deps.Log.Debug("Ignoring donation with no person attached: {DonationLink}, Batch: {BatchId}", 
                     PlanningCenterUtil.DonationLink(donation), donation.Batch?.Id);
                 progress.Skipped++;
                 return;
@@ -65,12 +65,12 @@ namespace Sync
             {
                 if (_donationsConfig.ExcludedFundIds?.Contains(designation.Fund.Id!) == true)
                 {
-                    Deps.Log.Debug("Skipping Fund {FundId}", designation.Fund.Id);
+                    _deps.Log.Debug("Skipping Fund {FundId}", designation.Fund.Id);
                     progress.Skipped++;
                     continue;
                 }
 
-                var fund = await Deps.Cache.GetOrAddEntity(designation.Fund.Id!, async (fundId) =>
+                var fund = await _deps.Cache.GetOrAddEntity(designation.Fund.Id!, async (fundId) =>
                 {
                     var fundDocument = await _givingClient.GetAsync<Fund>($"funds/{fundId}");
                     return fundDocument.Data;
@@ -87,7 +87,8 @@ namespace Sync
                     "Donation"
                 );
                 
-                await UploadActivity(progress, designation, activity, donation.Person.Id!);
+                await _deps.OrbitSync.UploadActivity<Donation, Designation>(
+                    progress, designation, activity, donation.Person.Id!);
                 if (progress.Complete) return;
             }
         }

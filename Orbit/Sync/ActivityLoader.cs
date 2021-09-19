@@ -27,10 +27,9 @@ namespace Sync
         private readonly OrbitInfo _info;
         private Progress _progress = null!;
 
-        public ActivityLoader(string activityType, SyncDeps deps, OrbitApiClient orbitClient)
+        public ActivityLoader(string activityType, OrbitApiClient orbitClient)
         {
             _activityType = activityType;
-            _deps = deps;
             _orbitClient = orbitClient;
             _info = new OrbitInfo();
         }

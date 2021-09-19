@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
@@ -38,42 +39,41 @@ namespace Sync
         }
     }
 
-    public class NotesToActivitiesSync : Sync<Note>
+    public class NotesToActivitiesSync : ISync<Note>
     {
+        private readonly SyncDeps _deps;
         private readonly PeopleClient _peopleClient;
         private readonly NotesConfig _config;
+        private readonly OrbitSync _orbitSync;
+        private SyncContext _context = null!;
 
-        public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config)
-            : base(deps, peopleClient)
+        public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config, OrbitSync orbitSync)
         {
+            _deps = deps;
             _peopleClient = peopleClient;
             _config = config;
+            _orbitSync = orbitSync;
         }
 
-        public override async Task<DocumentRoot<List<Note>>> GetInitialDataAsync(string? nextUrl)
+        public Task<PlanningCenterCursor<Note>?> InitializeAsync(SyncContext context)
         {
-            await base.GetInitialDataAsync(nextUrl);
-            
-            if (nextUrl != null)
-            {
-                return await _peopleClient.GetAsync<List<Note>>(nextUrl);
-            }
-
-            return await _peopleClient.GetAsync<List<Note>>("notes",
+            _context = context;
+            var url = context.NextUrl ?? UrlUtil.MakeUrl("notes",
                 ("order", "-created_at"));
+            return Task.FromResult(new PlanningCenterCursor<Note>(_peopleClient, url))!;
         }
 
-        public override async Task ProcessBatchAsync(Progress progress, Note note)
+        public async Task ProcessItemAsync(Note note)
         {
-            LastDate = note.CreatedAt;
+            var progress = _context.BatchProgress;
             if (!_config.CategoriesDict.TryGetValue(note.NoteCategory.Id!, out var categoryInfo))
             {
-                Log.Debug("Ignoring note with category {NoteCategoryId}", note.NoteCategory.Id);
+                _deps.Log.Debug("Ignoring note with category {NoteCategoryId}", note.NoteCategory.Id);
                 progress.Skipped++;
                 return;
             }
 
-            var noteCategory = await Deps.Cache.GetOrAddEntity(note.NoteCategory.Id!, async (categoryId) =>
+            var noteCategory = await _deps.Cache.GetOrAddEntity(note.NoteCategory.Id!, async (categoryId) =>
             {
                 var document = await _peopleClient.GetAsync<NoteCategory>($"note_categories/{categoryId}");
                 return document.Data;
@@ -92,7 +92,7 @@ namespace Sync
 
                 builder.Append(" was added by ");
 
-                var noteTaker = await Deps.Cache.GetOrAddEntity(note.CreatedBy.Id!, async (personId) =>
+                var noteTaker = await _deps.Cache.GetOrAddEntity(note.CreatedBy.Id!, async (personId) =>
                 {
                     var document = await _peopleClient.GetAsync<Person>($"people/{personId}");
                     return document.Data;
@@ -116,7 +116,7 @@ namespace Sync
             if (categoryInfo.CopyContent)
                 activity.Description = note.Value;
 
-            await UploadActivity(progress, note, activity, note.Person.Id!);
+            await _orbitSync.UploadActivity<Note,Note>(progress, note, activity, note.Person.Id!);
         }
     }
 }

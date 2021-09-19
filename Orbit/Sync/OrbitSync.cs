@@ -18,11 +18,12 @@ namespace Sync
         Create,
         Update
     }
-    
+
     public enum KeyExistsMode
     {
         // ignore key exists errors and continue uploading
         Skip,
+
         // assume we have finished uploading new data and stop uploading
         Stop
     }
@@ -34,7 +35,6 @@ namespace Sync
         public SyncMode Mode { get; set; } = SyncMode.Update;
 
         public KeyExistsMode KeyExistsMode { get; set; } = KeyExistsMode.Stop;
-
     }
 
     public class SyncDeps
@@ -45,9 +45,10 @@ namespace Sync
         public ILogger Log { get; }
         public LogDbContext LogDb { get; }
         public PeopleClient PeopleClient { get; set; }
+        public OrbitSync OrbitSync { get; }
 
         public SyncDeps(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
-            LogDbContext logDb, PeopleClient peopleClient)
+            LogDbContext logDb, PeopleClient peopleClient, OrbitSync orbitSync)
         {
             Config = config;
             OrbitClient = orbitClient;
@@ -55,46 +56,42 @@ namespace Sync
             Log = log;
             LogDb = logDb;
             PeopleClient = peopleClient;
+            OrbitSync = orbitSync;
         }
     }
 
-    public abstract class Sync<TSource> where TSource : EntityBase
+    public class OrbitSync
     {
         private readonly SyncImplConfig _config;
         private readonly OrbitApiClient _orbitClient;
         private readonly DataCache _cache;
-        protected readonly ILogger Log;
+        private readonly ILogger _log;
         private readonly LogDbContext _logDb;
+        private readonly PeopleClient _peopleClient;
 
-        protected Sync(SyncDeps deps, PlanningCenterClient planningCenterClient)
+
+        public OrbitSync(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
+            LogDbContext logDb, PeopleClient peopleClient)
         {
-            Deps = deps;
-            _config = deps.Config;
-            _orbitClient = deps.OrbitClient;
-            _cache = deps.Cache;
-            Log = deps.Log;
-            _logDb = deps.LogDb;
-            PlanningCenterClient = planningCenterClient;
+            _config = config;
+            _orbitClient = orbitClient;
+            _cache = cache;
+            _log = log;
+            _logDb = logDb;
+            _peopleClient = peopleClient;
         }
-        
-        public string LastDate { get; set; }
-        public virtual SyncType SyncType => SyncType.TopLevel;
 
-        protected SyncDeps Deps { get; }
-        public string From => typeof(TSource).Name;
-        public virtual string To => "Activity";
-
-        public PlanningCenterClient PlanningCenterClient { get; }
+        public string? LastDate { get; set; }
 
         protected Dictionary<string, ActivityLoader> OrbitInfo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public virtual async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
+        public async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync<TSource>(string? nextUrl)
         {
             if (_config.Mode == SyncMode.Update)
             {
                 var type = typeof(TSource).Name;
-                var loader = new ActivityLoader(type, Deps, _orbitClient);
-                
+                var loader = new ActivityLoader(type, _orbitClient);
+
                 OrbitInfo[type] = loader;
                 await loader.InitAsync();
             }
@@ -102,9 +99,7 @@ namespace Sync
             return new DocumentRoot<List<TSource>>();
         }
 
-        public abstract Task ProcessBatchAsync(Progress progress, TSource item);
-
-        protected async Task UploadActivity<TActivitySource>(
+        public async Task UploadActivity<TSource, TActivitySource>(
             Progress progress, TActivitySource source, UploadActivity activity, string personId)
             where TActivitySource : EntityBase
         {
@@ -144,27 +139,26 @@ namespace Sync
                         switch (_config.KeyExistsMode)
                         {
                             case KeyExistsMode.Stop:
-                                Log.Information("Key {ActivityKey} already exists, assuming upload complete",
+                                _log.Information("Key {ActivityKey} already exists, assuming upload complete",
                                     activity.Key);
                                 progress.Complete = true;
                                 return;
-                            
+
                             case KeyExistsMode.Skip:
                             default:
-                                Log.Debug("Skipping already uploaded activity");
+                                _log.Debug("Skipping already uploaded activity");
                                 progress.Skipped++;
                                 return;
                         }
-                        
                     }
 
-                    Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", source.Id,
+                    _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", source.Id,
                         orbitException.Message);
                     errorMessage = orbitException.Message;
                 }
                 else
                 {
-                    Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", source.Id);
+                    _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", source.Id);
                     errorMessage = ex.StackTrace;
                 }
 
@@ -188,7 +182,7 @@ namespace Sync
         {
             var memberSlug = await _cache.GetOrAddMapping<Person>(personId, async (_) =>
             {
-                var person = await Deps.PeopleClient.GetAsync<Person>($"people/{personId}");
+                var person = await _peopleClient.GetAsync<Person>($"people/{personId}");
                 var slug = await CreateMemberAsync(person.Data);
                 return slug;
             });
@@ -202,10 +196,12 @@ namespace Sync
             {
                 // if we put these tags on when we create, then the api will duplicate them with its own tags
                 // if we leave these tags off of the PUT, then the api will delete the tags
-                activity.Tags.AddRange(new []{
+                activity.Tags.AddRange(new[]
+                {
                     $"custom_type:{activity.Type.Kebaberize()}",
-                    $"custom_title:{activity.Title.Kebaberize()}"});
-                
+                    $"custom_title:{activity.Title.Kebaberize()}"
+                });
+
                 var updated = await _orbitClient.PutAsync<DocumentRoot<UploadActivity>>(
                     $"members/{memberSlug}/activities/{activityId}", activity);
             }
@@ -215,12 +211,13 @@ namespace Sync
 
         protected async Task<string?> CreateMemberAsync(Person person)
         {
+            LastDate = person.CreatedAt;
             var tags = new List<string>();
             if (person.Membership.Contains("(Child)", StringComparison.OrdinalIgnoreCase))
             {
                 person.Child = true;
             }
-            
+
             var member = new UpsertMember()
             {
                 Birthday = person.Birthdate,
@@ -237,18 +234,18 @@ namespace Sync
 
             try
             {
-                var created = await Deps.OrbitClient.PostAsync<Member>("members", member);
+                var created = await _orbitClient.PostAsync<Member>("members", member);
                 return created.Data.Slug;
             }
             catch (ApiException orbitEx)
             {
-                Deps.Log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
+                _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
                     orbitEx.Message);
                 return null;
             }
             catch (Exception ex)
             {
-                Deps.Log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
+                _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
                 return null;
             }
         }
@@ -256,22 +253,19 @@ namespace Sync
         public async Task CleanActivitiesAsync(string channel)
         {
             channel = OrbitUtil.ChannelTag(channel);
-            
-            Log.Information("Cleaning {Channel}", channel);
+
+            _log.Information("Cleaning {Channel}", channel);
             for (;;)
             {
                 var batch = await _orbitClient.GetAsync<List<CustomActivity>>(
                     $"activities?items=100&direction=DESC&sort=occurred_at&activity_tags={channel}");
                 if (!batch.Data.Any()) break;
-                Log.Information("{Date:MM/dd/yyyy}", DateTime.Parse(batch.Data.First().OccurredAt));
+                _log.Information("{Date:MM/dd/yyyy}", DateTime.Parse(batch.Data.First().OccurredAt));
                 foreach (var activity in batch.Data)
                 {
                     await _orbitClient.Delete($"members/{activity.Member.Slug}/activities/{activity.Id}");
                 }
-                
             }
         }
-        
-        public virtual Task AfterEachBatchAsync() => Task.CompletedTask;
     }
 }
