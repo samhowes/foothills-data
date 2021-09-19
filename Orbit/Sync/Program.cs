@@ -117,10 +117,10 @@ namespace Sync
 
         private static void LoadConfigs(ServiceCollection services, params Type[] types)
         {
-            // assume we're in the bin somewhere
             var dir = Directory.GetCurrentDirectory();
             var bin = dir!.IndexOf("bin", StringComparison.Ordinal);
-            var projectDir = dir[0..(bin - 1)];
+            
+            var projectDir = bin < 0 ? dir : dir[0..(bin - 1)];
             var configuration = new ConfigurationBuilder()
                 .AddYamlFile(Path.Combine(projectDir, "sync.yaml"))
                 .Build();
