@@ -42,7 +42,7 @@ namespace Sync
             _config = config;
         }
 
-        public async Task<PlanningCenterCursor<CheckIn>?> InitializeAsync(SyncContext context)
+        public async Task<ApiCursor<CheckIn>?> InitializeAsync(SyncContext context)
         {
             _context = context;
             var worships = await _checkInsClient.GetAsync<List<Event>>(UrlUtil.MakeUrl("events",
@@ -62,7 +62,7 @@ namespace Sync
                 ("include", "locations,event_times"),
                 ("order", "-created_at")));
             
-            return new PlanningCenterCursor<CheckIn>(_checkInsClient, url, _worship.Name);
+            return new ApiCursor<CheckIn>(_checkInsClient, url, _worship.Name);
         }
 
         public async Task ProcessItemAsync(CheckIn checkIn)

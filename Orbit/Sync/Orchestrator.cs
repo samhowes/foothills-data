@@ -18,13 +18,13 @@ namespace Sync
     }
     public interface ISync<TSource> : ISync
     {
-        Task<PlanningCenterCursor<TSource>?> InitializeAsync(SyncContext context);
+        Task<ApiCursor<TSource>?> InitializeAsync(SyncContext context);
         Task ProcessItemAsync(TSource item);
     }
 
     public interface IMultiSync<TTopLevel, TSource> : ISync<TSource>
     {
-        Task<PlanningCenterCursor<TTopLevel>> InitializeTopLevelAsync(SyncContext context);
+        Task<ApiCursor<TTopLevel>> InitializeTopLevelAsync(SyncContext context);
     }
 
     public class Orchestrator
@@ -52,12 +52,12 @@ namespace Sync
             _log.Information("Starting sync...");
             try
             {
-                // await PeopleToMembers();
+                await PeopleToMembers();
                 // await sync.CheckInsToActivities();
                 // await sync.DonationsToActivities();
 
                 // await GroupAttendanceToActivities();
-                await GroupMembershipToActivities();
+                // await GroupMembershipToActivities();
 
                 // await sync.NotesToActivities();
             }
@@ -139,6 +139,7 @@ namespace Sync
                     if (!await topCursor.FetchNextAsync()) break;
                 }    
             }
+            _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
         }
 
         private async Task<SyncContext> InitializeSync(ISync impl)
@@ -183,7 +184,7 @@ namespace Sync
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
         }
 
-        private async Task RecordStart<TSource>(SyncContext context, PlanningCenterCursor<TSource> cursor) where TSource : EntityBase
+        private async Task RecordStart<TSource>(SyncContext context, ApiCursor<TSource> cursor) where TSource : EntityBase
         {
             await cursor.InitializeAsync();
             if (context.OverallProgress.NextUrl == null)
@@ -199,7 +200,7 @@ namespace Sync
                 cursor.Meta.Count(), cursor.Meta.PageCount());
         }
 
-        private async Task ProcessCursorAsync<TSource>(ISync<TSource> impl, PlanningCenterCursor<TSource> cursor, 
+        private async Task ProcessCursorAsync<TSource>(ISync<TSource> impl, ApiCursor<TSource> cursor, 
             SyncContext context)
             where TSource : EntityBase
         {

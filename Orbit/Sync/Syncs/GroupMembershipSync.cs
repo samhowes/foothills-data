@@ -24,13 +24,13 @@ namespace Sync
         public abstract Task InitializeAsync();
     }
 
-    public class PlanningCenterCursor<T> : ApiCursor
+    public class ApiCursor<T> : ApiCursor
     {
 
-        private readonly PlanningCenterClient _client;
-        private DocumentRoot<List<T>> _batch = null!;
+        private readonly ApiClientBase _client;
+        private DocumentRoot<List<T>>? _batch;
 
-        public PlanningCenterCursor(PlanningCenterClient client, string nextUrl, string? name= null)
+        public ApiCursor(ApiClientBase client, string nextUrl, string? name= null)
         {
             NextUrl = nextUrl;
             _client = client;
@@ -46,11 +46,16 @@ namespace Sync
             Meta = _batch.Meta;
         }
 
-        public List<T> Data => _batch.Data;
+        public List<T>? Data => _batch?.Data;
 
         public async Task<bool> FetchNextAsync()
         {
-            NextUrl = _batch.Links.Next();
+            if (_batch == null)
+            {
+                await InitializeAsync();
+                return true;
+            }
+            NextUrl = _batch?.Links.Next();
             if (string.IsNullOrEmpty(NextUrl)) return false;
 
             _batch = await _client.GetAsync<List<T>>(NextUrl);
@@ -75,21 +80,21 @@ namespace Sync
             _groupsSync = groupsSync;
         }
         
-        public async Task<PlanningCenterCursor<Group>> InitializeTopLevelAsync(SyncContext context)
+        public async Task<ApiCursor<Group>> InitializeTopLevelAsync(SyncContext context)
         {
             _context = context;
             await _groupsSync.InitializeAsync();
 
             var url = UrlUtil.MakeUrl("groups");
-            var cursor = new PlanningCenterCursor<Group>(_groupsClient, url);
+            var cursor = new ApiCursor<Group>(_groupsClient, url);
             return cursor;
         }
 
-        public Task<PlanningCenterCursor<Membership>?> InitializeAsync(SyncContext context)
+        public Task<ApiCursor<Membership>?> InitializeAsync(SyncContext context)
         {
             var group = context.GetData<Group>();
             var url = UrlUtil.MakeUrl($"groups/{group.Id}/memberships", ("order", "-joined_at"));
-            var cursor = new PlanningCenterCursor<Membership>(_groupsClient, url, $"{group.Name}:Members");
+            var cursor = new ApiCursor<Membership>(_groupsClient, url, $"{group.Name}:Members");
             return Task.FromResult(cursor)!;
         }
 

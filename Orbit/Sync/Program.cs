@@ -65,18 +65,16 @@ namespace Sync
 
             // should not throw
             var org = await peopleClient.GetAsync<Organization>("");
-            var workspace = await orbitClient.GetAsync<Workspace>("");
+            var workspace = await orbitClient.GetAsync<Workspace>("sam-workspace");
             return 0;
         }
 
         private static async Task<IServiceProvider> ConfigureServices()
         {
-            var workspaceSlug = "sam-workspace";
-
             var services = new ServiceCollection();
             services
                 .AddPlanningCenter()
-                .AddOrbitApi(workspaceSlug);
+                .AddOrbitApi();
 
             var root = FindRoot();
 

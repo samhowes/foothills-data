@@ -55,12 +55,12 @@ namespace Sync
             _orbitSync = orbitSync;
         }
 
-        public Task<PlanningCenterCursor<Note>?> InitializeAsync(SyncContext context)
+        public Task<ApiCursor<Note>?> InitializeAsync(SyncContext context)
         {
             _context = context;
             var url = context.NextUrl ?? UrlUtil.MakeUrl("notes",
                 ("order", "-created_at"));
-            return Task.FromResult(new PlanningCenterCursor<Note>(_peopleClient, url))!;
+            return Task.FromResult(new ApiCursor<Note>(_peopleClient, url))!;
         }
 
         public async Task ProcessItemAsync(Note note)

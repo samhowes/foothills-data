@@ -130,8 +130,8 @@ namespace Sync
                     _deps.Cache.SetMapping<Person>(planningCenterIdentity.Uid!, activity.Member!.Slug);
                 }
             }
-            var max = DateTime.Parse(batch.Data.First().OccurredAt);
-            var min = DateTime.Parse(batch.Data.Last().OccurredAt);
+            var max = batch.Data.First().OccurredAt;
+            var min = batch.Data.Last().OccurredAt;
             _info.MinDate = MinDate(_info.MinDate, min);
             _info.MaxDate = MaxDate(_info.MaxDate, max);
             _progress.NextUrl = url;
