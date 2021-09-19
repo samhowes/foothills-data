@@ -65,7 +65,7 @@ namespace Sync
 
             // should not throw
             var org = await peopleClient.GetAsync<Organization>("");
-            var workspace = await orbitClient.GetAsync<Workspace>("");
+            var workspace = await orbitClient.GetAsync<Workspace>("sam-workspace");
             return 0;
         }
 
