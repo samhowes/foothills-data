@@ -7,8 +7,11 @@ jobs:
     - name: git checkout
       uses: actions/checkout@v2
       
-    - name: Build and Test
-      run: scripts/build.sh
+    - name: Build
+      run: dotnet build
+    
+    - name: test
+      run: dotnet test --no-build
     
     - name: Test Api Access
       run: scripts/run.sh
