@@ -21,6 +21,7 @@ sync:
   checkInsConfig:
     channel: Worship
     weight: 5
+    channelRegex: '(\(|\[)(ch)(annel)?:(?<channel>.*)(\)|\])'
     dateRanges:
     - activityType: In Person
       endDate: 3/14/2020

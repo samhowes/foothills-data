@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JsonApi;
 using Orbit.Api.Model;
@@ -14,6 +15,7 @@ namespace Sync
         public List<DateRangeConfig> DateRanges { get; set; } = null!;
         public string Channel { get; set; } = null!;
         public decimal Weight { get; set; }
+        public string ChannelRegex { get; set; }
     }
 
     public class DateRangeConfig
@@ -24,13 +26,15 @@ namespace Sync
         public bool Locations { get; set; }
     }
 
-    public class CheckInsToActivitiesSync : ISync<CheckIn>
+    public class CheckInsToActivitiesSync : IMultiSync<Event, CheckIn>
     {
         private readonly SyncDeps _deps;
         private readonly CheckInsClient _checkInsClient;
         private readonly CheckInsConfig _config;
-        private Event _worship = null!;
-        private SyncContext _context = null!;
+        private SyncContext _parentContext = null!;
+        private SyncContext? _childContext;
+        private readonly Regex _eventChannelRegex;
+        
 
         public CheckInsToActivitiesSync(
             SyncDeps deps,
@@ -40,77 +44,115 @@ namespace Sync
             _deps = deps;
             _checkInsClient = checkInsClient;
             _config = config;
+            _eventChannelRegex = new Regex(config.ChannelRegex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        }
+
+        public Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
+        {
+            _parentContext = context;
+            var url = context.NextUrl ?? UrlUtil.MakeUrl("events");
+            var cursor = new ApiCursor<Event>(_checkInsClient, url, "Events");
+            return Task.FromResult(cursor);
         }
 
         public async Task<ApiCursor<CheckIn>?> InitializeAsync(SyncContext context)
         {
-            _context = context;
-            var worships = await _checkInsClient.GetAsync<List<Event>>(UrlUtil.MakeUrl("events",
-                ("where[name]", "Sunday Attendance")));
+            _childContext = context;
+            var @event = context.GetData<Event>();
 
-            if (worships.Data.Count != 1)
+            var match = _eventChannelRegex.Match(@event.Name);
+            if (!match.Success)
             {
-                throw new PlanningCenterException(
-                    $"Expected to find 1 event titled 'Sunday Attendance', but found {worships.Meta.TotalCount()} " +
-                    $"instead: {string.Join(",", worships.Data.Select(w => w.Name))}");
+                _deps.Log.Debug("Skipping event without channel annotation: {EventName}", @event.Name);
+                return null;
             }
-            
-            _worship = worships.Data.Single();
-            _worship = (await _checkInsClient.GetAsync<Event>(_worship.Links.Self())).Data;
 
-            var url = context.NextUrl ?? UrlUtil.MakeUrl(UrlUtil.MakeUrl(_worship.Links!["check_ins"].Href,
-                ("include", "locations,event_times"),
-                ("order", "-created_at")));
+            @event.Name = @event.Name.Substring(0, match.Index).Trim();
             
-            return new ApiCursor<CheckIn>(_checkInsClient, url, _worship.Name);
+            var channel = match.Groups["channel"].Value;
+            
+            var details = await _checkInsClient.GetAsync<Event>(@event.Links.Self());
+            
+            var url = context.NextUrl ?? UrlUtil.MakeUrl(details.Data.Links!["check_ins"].Href,
+                ("include", "locations,event_times"),
+                ("order", "-created_at"));
+
+            context.SetData(new EventInfo(@event, channel));
+            return new ApiCursor<CheckIn>(_checkInsClient, url, $"{@event.Name}:{channel}");
         }
 
         public async Task ProcessItemAsync(CheckIn checkIn)
         {
-            var progress = _context.BatchProgress;
+            var progress = _childContext!.BatchProgress;
             if (checkIn.Person == null)
             {
                 _deps.Log.Warning("No person associated with CheckIn {CheckInId}", checkIn.Id);
                 progress.Skipped++;
-                _deps.LogDb.Mappings.Add(new Mapping()
-                {
-                    PlanningCenterId = checkIn.Id,
-                    Type = nameof(CheckIn),
-                    Error = $"Missing person for {checkIn.Links.Self()}"
-                });
-                await _deps.LogDb.SaveChangesAsync();
                 return;
             }
 
-            if (checkIn.EventTimes.Data.Count > 1) 
+            if (checkIn.EventTimes.Data.Count > 1)
                 _deps.Log.Error("double event times!");
-            if (checkIn.Locations.Data.Count > 1) 
+            if (checkIn.Locations.Data.Count > 1)
                 _deps.Log.Error("double locations!");
+
+            var info = _childContext.GetData<EventInfo>();
+            async Task CreateActivity(string? checkInName, string type)
+            {
+                var title = "Checked in";
+                if (checkInName != null)
+                {
+                    title += $" for {checkInName}";
+                }
+                
+                var activity = new UploadActivity(
+                    info!.Channel,
+                    type,
+                    OrbitUtil.ActivityKey(checkIn),
+                    OrbitUtil.FormatDate(checkIn.CreatedAt),
+                    _config.Weight,
+                    title,
+                    PlanningCenterUtil.CheckInsLink(checkIn.EventPeriod.Id!, checkIn.Id!),
+                    "CheckIn"
+                );
+
+                await _deps.OrbitSync.UploadActivity<CheckIn, CheckIn>(progress, checkIn, activity,
+                    checkIn.Person.Id!);
+            }
+            
             foreach (var eventTime in checkIn.EventTimes.Data)
             {
-                foreach (var location in checkIn.Locations.Data)
+                if (!checkIn.Locations.Data.Any())
                 {
-                    var dateRangeConfig = _config.DateRanges.Single(
-                        dr => dr.StartDate <= checkIn.CreatedAt
-                              && checkIn.CreatedAt <= dr.EndDate);
-
-                    var prefix = dateRangeConfig.Locations ? location.Name : dateRangeConfig.ActivityType;
-                    
-                    var activity = new UploadActivity(
-                        _config.Channel,
-                        $"{prefix} {_worship.Name}",
-                        OrbitUtil.ActivityKey(checkIn),
-                        OrbitUtil.FormatDate(checkIn.CreatedAt),
-                        _config.Weight,
-                        $"Checked in for {eventTime.Name}",
-                        PlanningCenterUtil.CheckInsLink(checkIn.EventPeriod.Id!, checkIn.Id!),
-                        "CheckIn"
-                    );
-
-                    await _deps.OrbitSync.UploadActivity<CheckIn, CheckIn>(progress, checkIn, activity, checkIn.Person.Id!);
-                    if (progress.Complete) return;
+                    await CreateActivity(eventTime.Name, info.Event.Name);
                 }
+                else
+                {
+                    foreach (var location in checkIn.Locations.Data)
+                    {
+                        var dateRangeConfig = _config.DateRanges.Single(
+                            dr => dr.StartDate <= checkIn.CreatedAt
+                                  && checkIn.CreatedAt <= dr.EndDate);
+
+                        var prefix = dateRangeConfig.Locations ? location.Name : dateRangeConfig.ActivityType;
+
+                        await CreateActivity(eventTime.Name!, $"{prefix} {info.Event.Name}");
+                    }
+                }
+                if (progress.Complete) return;
             }
+        }
+    }
+
+    public class EventInfo
+    {
+        public Event Event { get; }
+        public string Channel { get; }
+
+        public EventInfo(Event @event, string channel)
+        {
+            Event = @event;
+            Channel = channel;
         }
     }
 
