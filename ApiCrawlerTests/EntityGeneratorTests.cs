@@ -97,7 +97,7 @@ namespace PlanningCenter.Api.foo
             navigation.Name.Should().Be("Parent");
         }
 
-        [Fact]
+        // [Fact]
         public async Task Relationships_Works()
         {
             _generator.RegisterEntity(new ExampleObject()
