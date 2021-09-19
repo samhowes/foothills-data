@@ -1,5 +1,12 @@
 name: Orbit Sync
-on: [push]
+on: 
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
 jobs:
   Build-and-Test:
     runs-on: ubuntu-latest
