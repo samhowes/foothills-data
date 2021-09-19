@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
+using CsvHelper;
+using CsvHelper.Configuration;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-
+    
 namespace Sync
 {
     public record SyncConfig(long MaxCount);
@@ -34,16 +38,20 @@ namespace Sync
         private readonly LogDbContext _logDb;
         private readonly SyncConfig _config;
         private readonly OrbitSync _orbitSync;
+        private readonly List<SyncStats> _syncs;
+        private FilesConfig _filesConfig;
 
 
         public Orchestrator(ILogger log, IServiceProvider services, LogDbContext logDb, SyncConfig config, 
-            SyncDeps deps)
+            SyncDeps deps, FilesConfig filesConfig)
         {
             _log = log;
             _services = services;
             _logDb = logDb;
             _config = config;
+            _filesConfig = filesConfig;
             _orbitSync = deps.OrbitSync;
+            _syncs = new List<SyncStats>();
         }
 
         public async Task<int> All()
@@ -68,6 +76,11 @@ namespace Sync
             }
 
             await _logDb.SaveChangesAsync();
+
+            await using var writer = new StreamWriter(File.Create(Path.Combine(_filesConfig.Root, "report.csv")));
+            await using var csv = new CsvWriter(writer,new CsvConfiguration(CultureInfo.InvariantCulture));
+            await csv.WriteRecordsAsync(_syncs);
+
             return returnCode;
         }
         
@@ -109,6 +122,9 @@ namespace Sync
 
         private async Task MultiSync<TTopLevel, TSource>(IMultiSync<TTopLevel, TSource> impl) where TSource : EntityBase where TTopLevel : EntityBase
         {
+            var record = new SyncStats(typeof(TSource).Name);
+            _syncs.Add(record);
+            
             _log.Information("Starting multi-sync from {SyncFrom} to {SyncChild} to {SyncTo}", 
                 typeof(TTopLevel).Name, typeof(TSource).Name, impl.To);
 
@@ -141,6 +157,7 @@ namespace Sync
                 }    
             }
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
+            record.Record(context.OverallProgress);
         }
 
         private async Task<SyncContext> InitializeSync(ISync impl)
@@ -171,6 +188,8 @@ namespace Sync
 
         private async Task Sync<TSource>(ISync<TSource> impl) where TSource : EntityBase
         {
+            var record = new SyncStats(typeof(TSource).Name);
+            _syncs.Add(record);
             _log.Information("Starting sync from {SyncFrom} to {SyncTo}", typeof(TSource).Name, impl.To);
             var context = await InitializeSync(impl);
             var cursor = await impl.InitializeAsync(context);
@@ -183,6 +202,7 @@ namespace Sync
                 await ProcessCursorAsync(impl, cursor, context);
             }
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
+            record.Record(context.OverallProgress);
         }
 
         private async Task RecordStart<TSource>(SyncContext context, ApiCursor<TSource> cursor) where TSource : EntityBase
@@ -252,6 +272,28 @@ namespace Sync
                 progress.SecondsElapsed, progress.Total, meta.TotalCount(), progress.Success,
                 progress.Skipped,
                 progress.Failed, progress.RecordsPerSecond);
+        }
+    }
+
+    public class SyncStats
+    {
+        public SyncStats(string source)
+        {
+            Source = source;
+        }
+        public string Source { get; set; }
+        public long SourceTotal => Success + Failed + Skipped;
+        public long Success { get; set; }
+        public long Failed { get; set; }
+        public long Skipped { get; set; }
+        public double TotalSeconds { get; set; }
+
+        public void Record(Progress o)
+        {
+            Success = o.Success;
+            Skipped = o.Skipped;
+            Failed = o.Failed;
+            TotalSeconds = Math.Round(o.Timer.Elapsed.TotalSeconds, 1);
         }
     }
 

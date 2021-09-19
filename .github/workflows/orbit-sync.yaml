@@ -32,6 +32,7 @@ jobs:
         path: |
           *.db
           *.log
+          *.csv
           
     - name: Slack Notification
       uses: rtCamp/action-slack-notify@v2

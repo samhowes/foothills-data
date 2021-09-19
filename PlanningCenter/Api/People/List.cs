@@ -2,7 +2,7 @@ using JsonApi;
 
 namespace PlanningCenter.Api.People
 {
-    public class List : EntityBase
+    public class PeopleList : EntityBase
     {
         public string Name { get; set; }
         public string AutoRefresh { get; set; }

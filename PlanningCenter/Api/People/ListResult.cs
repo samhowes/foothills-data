@@ -9,6 +9,6 @@ namespace PlanningCenter.Api.People
         public string PersonId { get; set; }
         public Person Person { get; set; }
         public string ListId { get; set; }
-        public List List { get; set; }
+        public PeopleList List { get; set; }
     }
 }
