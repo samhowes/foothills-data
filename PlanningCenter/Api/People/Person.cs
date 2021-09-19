@@ -1,3 +1,4 @@
+using System;
 using JsonApi;
 
 namespace PlanningCenter.Api.People
@@ -18,11 +19,11 @@ namespace PlanningCenter.Api.People
         public string SiteAdministrator { get; set; }
         public string AccountingAdministrator { get; set; }
         public string PeoplePermissions { get; set; }
-        public string Membership { get; set; }
+        public string? Membership { get; set; }
         public string InactivatedAt { get; set; }
         public string Status { get; set; }
         public string MedicalNotes { get; set; }
-        public string CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public string Avatar { get; set; }
         public string Name { get; set; }
@@ -34,5 +35,6 @@ namespace PlanningCenter.Api.People
         public string RemoteId { get; set; }
         public string PrimaryCampusId { get; set; }
         public PrimaryCampus PrimaryCampus { get; set; }
+        public string OrbitWorkspace { get; set; }
     }
 }

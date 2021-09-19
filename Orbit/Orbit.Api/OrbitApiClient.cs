@@ -15,13 +15,12 @@ namespace Orbit.Api
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddOrbitApi(this IServiceCollection services, string workspaceSlug,
-            string? apiToken = null)
+        public static IServiceCollection AddOrbitApi(this IServiceCollection services, string? apiToken = null)
         {
             apiToken ??= Environment.GetEnvironmentVariable("ORBIT_API_TOKEN");
             services.AddHttpClient<OrbitApiClient>(client =>
             {
-                client.BaseAddress = new Uri($"https://app.orbit.love/api/v1/{workspaceSlug}/");
+                client.BaseAddress = new Uri($"https://app.orbit.love/api/v1/");
                 client.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", apiToken);
             });
@@ -90,9 +89,9 @@ namespace Orbit.Api
 
         public record AddActivity(UploadActivity Activity, OtherIdentity Identity);
         
-        public async Task CreateActivity(UploadActivity uploadActivity, OtherIdentity identity)
+        public async Task CreateActivity(string workspace, UploadActivity uploadActivity, OtherIdentity identity)
         {
-            var created = await PostAsync<DocumentRoot<UploadActivity>>("activities", 
+            var created = await PostAsync<DocumentRoot<UploadActivity>>($"{workspace}/activities", 
                 new AddActivity(uploadActivity, identity));
         }
 

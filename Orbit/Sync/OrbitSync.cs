@@ -33,8 +33,9 @@ namespace Sync
     {
         public bool ShouldDelete { get; set; }
         public SyncMode Mode { get; set; } = SyncMode.Update;
-
         public KeyExistsMode KeyExistsMode { get; set; } = KeyExistsMode.Stop;
+        public string DefaultWorkspace { get; set; }
+        public string ChildWorkspace { get; set; }
     }
 
     public class SyncDeps
@@ -68,6 +69,7 @@ namespace Sync
         private readonly ILogger _log;
         private readonly LogDbContext _logDb;
         private readonly PeopleClient _peopleClient;
+        private readonly Dictionary<string, Loader<Member>> _loaders;
 
 
         public OrbitSync(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
@@ -79,9 +81,21 @@ namespace Sync
             _log = log;
             _logDb = logDb;
             _peopleClient = peopleClient;
+
+            Loader<Member> MakeCursor(string workspace, string name)
+            {
+                var cursor = new ApiCursor<Member>(_orbitClient!, $"{workspace}/members?sort=created_at", name);
+                return new(cursor, (m) => m.CreatedAt, _cache);
+            }
+            
+            _loaders = new Dictionary<string, Loader<Member>>()
+            {
+                [_config.ChildWorkspace] = MakeCursor(_config.ChildWorkspace, "Children"),
+                [_config.DefaultWorkspace] = MakeCursor(_config.DefaultWorkspace, "Adults")
+            };
         }
 
-        public string? LastDate { get; set; }
+        public DateTime LastDate { get; set; }
 
         protected Dictionary<string, ActivityLoader> OrbitInfo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -104,9 +118,16 @@ namespace Sync
             where TActivitySource : EntityBase
         {
             LastDate = activity.OccurredAt;
+            var person = await _cache.GetOrAddEntity(personId, async (_) =>
+            {
+                var doc = await _peopleClient.GetAsync<Person>($"people/{personId}");
+                SetChild(doc.Data);
+                SetWorkspace(doc.Data);
+                return doc.Data;
+            });
+
             try
             {
-                var occurredAt = DateTime.Parse(activity.OccurredAt);
                 var identity = new OtherIdentity(source: Constants.PlanningCenterSource)
                 {
                     Uid = personId
@@ -114,18 +135,18 @@ namespace Sync
                 OrbitInfo? info = null;
                 if (OrbitInfo.TryGetValue(typeof(TSource).Name, out var loader))
                 {
-                    info = await loader.GetUntil(occurredAt);
+                    info = await loader.GetUntil(activity.OccurredAt);
                 }
 
                 if (_config.Mode == SyncMode.Create ||
-                    (info != null && info.MaxDate < DateTime.Parse(activity.OccurredAt)))
+                    (info != null && info.MaxDate < activity.OccurredAt))
                 {
-                    await _orbitClient.CreateActivity(activity, identity);
+                    await _orbitClient.CreateActivity(person.OrbitWorkspace, activity, identity);
                     progress.Success++;
                 }
                 else
                 {
-                    if (await UpsertActivity(source, activity, personId, identity))
+                    if (await UpsertActivity(person, source, activity, identity))
                         progress.Success++;
                 }
             }
@@ -176,21 +197,25 @@ namespace Sync
             }
         }
 
-        private async Task<bool> UpsertActivity<TActivitySource>(TActivitySource source, UploadActivity activity,
-            string personId, OtherIdentity identity)
+        private void SetWorkspace(Person person)
+        {
+            person.OrbitWorkspace = person.Child ? _config.ChildWorkspace : _config.DefaultWorkspace;
+        }
+
+        private static bool SetChild(Person person)
+        {
+            person.Child = person.Child ||
+                           person.Membership?.Contains("(Child)", StringComparison.OrdinalIgnoreCase) == true;
+            return person.Child;
+        }
+
+        private async Task<bool> UpsertActivity<TActivitySource>(
+            Person person, TActivitySource source, UploadActivity activity, OtherIdentity identity)
             where TActivitySource : EntityBase
         {
-            var memberSlug = await _cache.GetOrAddMapping<Person>(personId, async (_) =>
-            {
-                var person = await _peopleClient.GetAsync<Person>($"people/{personId}");
-                var slug = await CreateMemberAsync(person.Data);
-                return slug;
-            });
-            if (memberSlug == null) return false;
-
             if (!_cache.TryGetMapping(source, out var activityId))
             {
-                await _orbitClient.CreateActivity(activity, identity!);
+                await _orbitClient.CreateActivity(person.OrbitWorkspace, activity, identity!);
             }
             else
             {
@@ -203,23 +228,30 @@ namespace Sync
                 });
 
                 var updated = await _orbitClient.PutAsync<DocumentRoot<UploadActivity>>(
-                    $"members/{memberSlug}/activities/{activityId}", activity);
+                    $"{person.OrbitWorkspace}/members/{person.Id}/activities/{activityId}", activity);
             }
 
             return true;
         }
 
-        protected async Task<string?> CreateMemberAsync(Person person)
+        public async Task<Member?> CreateMemberAsync(Person person)
         {
             LastDate = person.CreatedAt;
+            SetChild(person);
+            SetWorkspace(person);
+
+            var loader = _loaders[person.OrbitWorkspace];
+            await loader.GetUntil(person.CreatedAt);
+            
+            
             var tags = new List<string>();
-            if (person.Membership.Contains("(Child)", StringComparison.OrdinalIgnoreCase))
-            {
-                person.Child = true;
-            }
+            if (person.Child)
+                tags.Add("child");
 
             var member = new UpsertMember()
             {
+                Url = PlanningCenterUtil.PersonLink(person.Id!),
+                Email = $"{person.Id}@foothillsuu.org",
                 Birthday = person.Birthdate,
                 Name = person.Name,
                 Slug = person.Id!,
@@ -234,24 +266,29 @@ namespace Sync
 
             try
             {
-                var created = await _orbitClient.PostAsync<Member>("members", member);
-                return created.Data.Slug;
+                var created = await _orbitClient.PostAsync<Member>($"{person.OrbitWorkspace}/members", member);
+                _cache.SetEntity(person);
+                return created.Data;
+            }
+            catch (ApiErrorException)
+            {
+                throw;
             }
             catch (ApiException orbitEx)
             {
                 _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", person.Id,
                     orbitEx.Message);
-                return null;
             }
             catch (Exception ex)
             {
                 _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
-                return null;
             }
+            return null;
         }
 
         public async Task CleanActivitiesAsync(string channel)
         {
+            throw new NotImplementedException();
             channel = OrbitUtil.ChannelTag(channel);
 
             _log.Information("Cleaning {Channel}", channel);
@@ -260,7 +297,7 @@ namespace Sync
                 var batch = await _orbitClient.GetAsync<List<CustomActivity>>(
                     $"activities?items=100&direction=DESC&sort=occurred_at&activity_tags={channel}");
                 if (!batch.Data.Any()) break;
-                _log.Information("{Date:MM/dd/yyyy}", DateTime.Parse(batch.Data.First().OccurredAt));
+                _log.Information("{Date:MM/dd/yyyy}", batch.Data.First().OccurredAt);
                 foreach (var activity in batch.Data)
                 {
                     await _orbitClient.Delete($"members/{activity.Member.Slug}/activities/{activity.Id}");

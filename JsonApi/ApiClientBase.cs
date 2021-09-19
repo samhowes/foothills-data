@@ -97,8 +97,21 @@ namespace JsonApi
         protected async Task<T> ReadResponse<T>(HttpResponseMessage response)
         {
             var body = await response.Content.ReadAsStringAsync();
+            
             if (!response.IsSuccessStatusCode)
             {
+                ErrorResponse errors = null;
+                try
+                {
+                    errors = JsonConvert.DeserializeObject<ErrorResponse>(body, ReadJsonSettings);
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                if (errors != null) throw new ApiErrorException(response.RequestMessage!.RequestUri, body, errors);
+                
                 throw new ApiException($"Http failure for {response.RequestMessage!.RequestUri}: {body}");
             }
             
@@ -106,7 +119,34 @@ namespace JsonApi
             return typed;
         }
     }
+
+    public enum ErrorTypeEnum
+    {
+        Unkown,
+        AlreadyTaken
+    }
     
+    public class ApiErrorException : ApiException
+    {
+        public ErrorTypeEnum Type { get; }
+        public ErrorResponse Errors { get; }
+
+        public ApiErrorException(Uri requestUri, string body, ErrorResponse errors)
+            : base($"Http failure for {requestUri}: {body}")
+        {
+            Errors = errors;
+            if (errors.Errors.Values.Any(e => e.Contains("has already been taken")))
+            {
+                Type = ErrorTypeEnum.AlreadyTaken;
+            }
+        }
+    }
+
+    public class ErrorResponse
+    {
+        public Dictionary<string, List<string>> Errors { get; set; } = new();
+    }
+
     public class ApiException : Exception
     {
         public ApiException(string message) : base(message)
