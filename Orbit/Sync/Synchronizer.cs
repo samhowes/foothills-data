@@ -155,5 +155,30 @@ namespace Sync
             var impl = _services.GetRequiredService<GroupMembershipSync>();
             await Sync(impl);
         }
+
+        public async Task<int> All()
+        {
+            var returnCode = 0;
+            _log.Information("Starting sync...");
+            try
+            {
+                // await sync.PeopleToMembers();
+                // await sync.CheckInsToActivities();
+                // await sync.DonationsToActivities();
+
+                await GroupAttendanceToActivities();
+                // await sync.GroupToActivities();
+
+                // await sync.NotesToActivities();
+            }
+            catch (Exception e)
+            {
+                _log.Fatal(e, "Unexpected error while performing sync");
+                returnCode = 1;
+            }
+
+            await _logDb.SaveChangesAsync();
+            return returnCode;
+        }
     }
 }

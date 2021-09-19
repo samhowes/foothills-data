@@ -4,5 +4,8 @@ indent_style = space
 [*.cs]
 indent_size = 4
 
+[*proj]
+indent_size = 2
+
 [*.md]
 indent_size = 2

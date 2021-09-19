@@ -4,10 +4,9 @@ sync:
   childWorkspace: foothills-children 
     
   groupConfig:
-    defaultChannel: Belonging & Community
+    defaultChannel: BelongingAndCommunity
     ignoreTagName: Ignore
     channelTagGroupId: 417552
-    clean: true
     
   groupMembershipConfig: 
     weight: 6

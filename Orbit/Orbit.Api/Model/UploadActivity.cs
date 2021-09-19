@@ -57,6 +57,7 @@ namespace Orbit.Api.Model
             Tags = tags.Concat(new []
             {
                 OrbitUtil.ChannelTag(channel),
+                OrbitUtil.KeyTag(key)
             }).ToList();
             ActivityType = type;
             Key = key;

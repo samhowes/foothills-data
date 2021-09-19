@@ -4,11 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.6.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orbit", "Orbit", "{A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}"
-ProjectSection(SolutionItems) = preProject
-	Orbit\swagger.yaml = Orbit\swagger.yaml
-	Orbit\generate_api.sh = Orbit\generate_api.sh
-	Orbit\swagger.config.json = Orbit\swagger.config.json
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		Orbit\swagger.yaml = Orbit\swagger.yaml
+		Orbit\generate_api.sh = Orbit\generate_api.sh
+		Orbit\swagger.config.json = Orbit\swagger.config.json
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sync", "Orbit\Sync\Sync.csproj", "{F07A6EE0-7C34-4623-B5AD-DDCAB8C43F02}"
 EndProject
@@ -27,6 +27,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orbit.Api", "Orbit\Orbit.Api\Orbit.Api.csproj", "{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonApi", "JsonApi\JsonApi.csproj", "{5A02DF55-A000-4D55-890E-6AAB1187CB56}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orbit", "Orbit", "{308A3A7D-6C49-42BC-ACCD-BFABC5CEE435}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sync", "Tests\Orbit\Sync\Sync.csproj", "{2241E002-F648-4917-B916-EE6D70B15BFC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -113,6 +117,18 @@ Global
 		{5A02DF55-A000-4D55-890E-6AAB1187CB56}.Release|x64.Build.0 = Release|Any CPU
 		{5A02DF55-A000-4D55-890E-6AAB1187CB56}.Release|x86.ActiveCfg = Release|Any CPU
 		{5A02DF55-A000-4D55-890E-6AAB1187CB56}.Release|x86.Build.0 = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|x64.Build.0 = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Debug|x86.Build.0 = Debug|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|x64.ActiveCfg = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|x64.Build.0 = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|x86.ActiveCfg = Release|Any CPU
+		{2241E002-F648-4917-B916-EE6D70B15BFC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F07A6EE0-7C34-4623-B5AD-DDCAB8C43F02} = {A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}
@@ -121,5 +137,7 @@ Global
 		{3E2B512E-BA95-42DE-BA03-AAA89A5FCC22} = {63CF8188-EE0D-4B6C-8B4B-3FCAF6582579}
 		{1FD1D3B7-B041-4312-BCEF-DC8ECA8B5B82} = {3E2B512E-BA95-42DE-BA03-AAA89A5FCC22}
 		{08DF4C3F-4494-4E76-AD06-A43E8B44F4C8} = {A1F0C0A9-13F4-4EAA-9449-A5656E80BBE4}
+		{308A3A7D-6C49-42BC-ACCD-BFABC5CEE435} = {63CF8188-EE0D-4B6C-8B4B-3FCAF6582579}
+		{2241E002-F648-4917-B916-EE6D70B15BFC} = {308A3A7D-6C49-42BC-ACCD-BFABC5CEE435}
 	EndGlobalSection
 EndGlobal

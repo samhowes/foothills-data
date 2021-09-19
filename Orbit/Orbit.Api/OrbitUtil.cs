@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Humanizer;
 using JsonApi;
 
 namespace Sync
@@ -16,7 +17,7 @@ namespace Sync
         
         public static string ActivityKey<TEntity>(TEntity entity) where TEntity : EntityBase
         {
-            return $"{typeof(TEntity).Name.ToLower()}/{entity.Id}";
+            return $"{typeof(TEntity).Name.ToLower()}:{entity.Id}";
         }
         public static (string entityName, string id)? EntityId(string? activityKey)
         {
@@ -38,5 +39,14 @@ namespace Sync
         {
             return dateTime.ToUniversalTime().ToString(DateFormatString);
         }
+
+        private static readonly Regex Cleaner = new(@"([\W])" , RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        public static string CleanChannelName(string channel)
+        {
+            var cleaned = Cleaner.Replace(channel, " ");
+            return cleaned.Trim().Pascalize();
+        }
+
+        public static string KeyTag(string key) => $"key:{key.Replace('/', ':')}";
     }
 }

@@ -46,17 +46,20 @@ namespace Sync
             Log.Information("Found {ChannelCount} channel tags: {ChannelTags}", channelTags.Data.Count,
                 channelTags.Data.Select(t => t.Name));
 
-            _channels = channelTags.Data.ToDictionary(t => t.Id!);
-
-            if (_groupConfig.Clean)
+            _channels = new Dictionary<string, Tag>();
+            foreach (var tag in channelTags.Data)
             {
-                foreach (var channel in _channels.Values)
+                _channels[tag.Id!] = tag;
+                tag.Name = OrbitUtil.CleanChannelName(tag.Name);
+                if (_groupConfig.Clean)
                 {
-                    await CleanActivitiesAsync(channel.Name.Kebaberize());
+                    await CleanActivitiesAsync(tag.Name);    
                 }
+                
+                if (tag.Name == _groupConfig.IgnoreTagName)
+                    _ignoreTag = tag;
             }
-
-            _ignoreTag = _channels.Values.SingleOrDefault(t => t.Name == _groupConfig.IgnoreTagName)!;
+            
             if (_ignoreTag == null)
             {
                 throw new PlanningCenterException(
