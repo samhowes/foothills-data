@@ -32,6 +32,6 @@ jobs:
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_COLOR: ${{ job.status }}
-        SLACK_MESSAGE: 'Build and Test Completed with status: ${{ job.status }}' 
+        SLACK_MESSAGE: 'Build and Test Completed with: ${{ job.status }}' 
         SLACK_ICON: https://assets-global.website-files.com/6090f2cbfb550680d4288567/60916d2d77cab34ad9d7666f_Logo.svg
         
