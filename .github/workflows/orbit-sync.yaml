@@ -1,14 +1,16 @@
 name: Orbit Sync
-on: 
-  push:
-    branches:
-    - master
-  pull_request:
-    branches:
-    - master
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode to run the sync in'
+        required: true
+        default: 'test'
+  schedule:
+  - cron: '30 0 * * *' # run at 12:30 every day
 
 jobs:
-  Build-and-Test:
+  Sync:
     runs-on: ubuntu-latest
     steps:
     - name: git checkout
@@ -17,11 +19,8 @@ jobs:
     - name: Build
       run: dotnet build
     
-    - name: test
-      run: dotnet test --no-build
-    
     - name: Test Api Access
-      run: scripts/run.sh
+      run: scripts/run.sh ${{ github.event.inputs.mode }}
       env:
         ORBIT_API_TOKEN: ${{ secrets.ORBIT_API_TOKEN }}
         PCO_APPLICATION_ID: ${{ secrets.PCO_APPLICATION_ID }}

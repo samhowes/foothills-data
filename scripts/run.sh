@@ -10,4 +10,4 @@ echo "===================================================="
 
 pushd Orbit/Sync
 
-dotnet run --no-build -- test
+dotnet run --no-build -- "$1"

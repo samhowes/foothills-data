@@ -1,0 +1,28 @@
+name: Build and Test
+on: 
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  Build-and-Test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v2
+      
+    - name: Build
+      run: dotnet build
+    
+    - name: test
+      run: dotnet test --no-build
+    
+    - name: Test Api Access
+      run: scripts/run.sh
+      env:
+        ORBIT_API_TOKEN: ${{ secrets.ORBIT_API_TOKEN }}
+        PCO_APPLICATION_ID: ${{ secrets.PCO_APPLICATION_ID }}
+        PCO_SECRET: ${{ secrets.PCO_SECRET }}
