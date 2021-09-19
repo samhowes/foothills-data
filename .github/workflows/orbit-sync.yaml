@@ -1,4 +1,4 @@
-name: GitHub Actions Demo
+name: Orbit Sync
 on: [push]
 jobs:
   Build-and-Test:
@@ -15,4 +15,7 @@ jobs:
     
     - name: Test Api Access
       run: scripts/run.sh
-      
+      env:
+        ORBIT_API_TOKEN: ${{ secrets.ORBIT_API_TOKEN }}
+        PCO_APPLICATION_ID: ${{ secrets.PCO_APPLICATION_ID }}
+        PCO_SECRET: ${{ secrets.PCO_SECRET }}
