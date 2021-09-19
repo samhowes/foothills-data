@@ -1,12 +1,17 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using CommandLine;
+using CommandLine.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orbit.Api;
+using Orbit.Api.Model;
 using PlanningCenter.Api;
+using PlanningCenter.Api.People;
 using SamHowes.Extensions.Configuration.Yaml;
 using Serilog;
 
@@ -16,10 +21,55 @@ namespace Sync
     {
         public string Root { get; set; }
     }
-    
+
+    public class SyncCommand
+    {
+        [Value(0, Required = true)] public string Action { get; set; }
+    }
+
     public static class Program
     {
-        static async Task Main(string[] args)
+        static async Task<int> Main(string[] args)
+        {
+            var provider = await ConfigureServices();
+
+            var parser = new Parser(with => with.HelpWriter = null);
+
+            var result = parser.ParseArguments<SyncCommand>(args);
+            if (result.Errors?.Any() == true)
+            {
+                var text = HelpText.AutoBuild(result);
+                Console.Error.WriteLine(text.ToString());
+                return -1;
+            }
+
+            var command = result.Value;
+
+            switch (command.Action)
+            {
+                case "test":
+                    return await VerifyApiAccess(provider);
+                case "sync":
+                    var sync = provider.GetRequiredService<Synchronizer>();
+                    return await sync.All();
+                default:
+                    Console.WriteLine($"Unknown action '{command.Action}'");
+                    return -1;
+            }
+        }
+
+        private static async Task<int> VerifyApiAccess(IServiceProvider provider)
+        {
+            var peopleClient = provider.GetRequiredService<PeopleClient>();
+            var orbitClient = provider.GetRequiredService<OrbitApiClient>();
+
+            // should not throw
+            var org = await peopleClient.GetAsync<Organization>("");
+            var workspace = await orbitClient.GetAsync<Workspace>("");
+            return 0;
+        }
+
+        private static async Task<IServiceProvider> ConfigureServices()
         {
             var workspaceSlug = "sam-workspace";
 
@@ -38,14 +88,6 @@ namespace Sync
                 .WriteTo.File(Path.Combine(root, "sync.log"))
                 .CreateLogger();
 
-            services.AddSingleton<ILogger>(log);
-            services.AddSingleton<Synchronizer>();
-            services.AddTransient<SyncDeps>();
-            services.AddSingleton<DataCache>();
-            services.AddTransient<PeopleToMembersSync>();
-            services.AddTransient<CheckInsToActivitiesSync>();
-            services.AddTransient<DonationsToActivitiesSync>();
-
             LoadConfigs(services,
                 typeof(CheckInsConfig),
                 typeof(DonationsConfig),
@@ -55,37 +97,22 @@ namespace Sync
                 typeof(NotesConfig));
 
             var db = await GetLog(root);
-            services.AddSingleton(db)
+            services
+                .AddSingleton<ILogger>(log)
+                .AddSingleton(db)
+                .AddSingleton<Synchronizer>()
+                .AddTransient<SyncDeps>()
+                .AddSingleton<DataCache>()
+                .AddTransient<PeopleToMembersSync>()
+                .AddTransient<CheckInsToActivitiesSync>()
+                .AddTransient<DonationsToActivitiesSync>()
                 .AddTransient<GroupAttendanceSync>()
                 .AddTransient<GroupMembershipSync>()
                 .AddTransient<NotesToActivitiesSync>()
                 .AddSingleton(new SyncConfig(0));
 
             var provider = services.BuildServiceProvider();
-            
-            
-            
-            var sync = provider.GetRequiredService<Synchronizer>();
-
-            log.Information("Starting sync to workspace {WorkspaceSlug}...", workspaceSlug);
-            try
-            {
-                // await sync.PeopleToMembers();
-                await sync.CheckInsToActivities();
-                // await sync.DonationsToActivities();
-
-                // await sync.GroupAttendanceToActivities();
-                // await sync.GroupToActivities();
-
-                // await sync.NotesToActivities();
-
-            }
-            catch (Exception e)
-            {
-                log.Fatal(e, "Unexpected error while performing sync");
-            }
-
-            await db.SaveChangesAsync();
+            return provider;
         }
 
         private static void LoadConfigs(ServiceCollection services, params Type[] types)
