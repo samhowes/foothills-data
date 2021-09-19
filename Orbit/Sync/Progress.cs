@@ -37,6 +37,7 @@ namespace Sync
         public decimal RecordsPerSecond => ((decimal)Total / Math.Max(Timer.ElapsedMilliseconds, 1)) * 1000m;
 
         public long TotalTime { get; set; }
+        public bool Complete { get; set; }
 
         public void Accumulate(Progress other)
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using JsonApiSerializer;
@@ -15,6 +16,26 @@ using Serilog;
 
 namespace JsonApi
 {
+    public static class UrlUtil
+    {
+        public static string MakeUrl(string baseUrl, params (string key, string value)[] parameters)
+        {
+            var url = new StringBuilder(baseUrl);
+            if (parameters.Length > 0)
+            {
+                url.Append("?");
+                foreach (var param in parameters)
+                {
+                    url.AppendFormat("{0}={1}",
+                        HttpUtility.UrlEncode(param.key),
+                        HttpUtility.UrlEncode(param.value));
+                }
+            }
+
+            return url.ToString();
+        }
+    }
+
     public class ApiClientBase
     {
         public static JsonSerializerSettings CreateJsonSettings()
@@ -54,15 +75,8 @@ namespace JsonApi
             }
         }
         
-        public async Task<DocumentRoot<T>> GetAsync<T>(string url, params (string key, string value)[] parameters)
+        public async Task<DocumentRoot<T>> GetAsync<T>(string url)
         {
-            if (parameters.Length > 0)
-            {
-                var query = string.Join("&",
-                    parameters.Select(p => $"{HttpUtility.UrlEncode((string?) p.key)}={HttpUtility.UrlEncode((string?) p.value)}"));
-                url += "?" + query;
-            }
-            
             var response = await Policy
                 .HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.TooManyRequests)
                 .WaitAndRetryAsync(5, retryAttempt =>

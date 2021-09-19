@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using PlanningCenter.Api;
 using PlanningCenter.Api.Groups;
+using Serilog;
 
 namespace Sync
 {
@@ -25,25 +27,29 @@ namespace Sync
         public bool Clean { get; set; }
     }
 
-    public abstract class GroupSync<TSource> : Sync<TSource> where TSource : EntityBase
+    public class GroupSync 
     {
-        protected readonly GroupsClient GroupsClient;
+        private readonly GroupsClient _groupsClient;
         private readonly GroupConfig _groupConfig;
+        private Tag _ignoreTag = null!;
+        private Dictionary<string, Tag> _channels = null!;
+        private readonly ILogger _log;
+        private readonly DataCache _cache;
 
-        protected GroupSync(SyncDeps deps, GroupsClient groupsClient, GroupConfig config) : base(deps, groupsClient)
+        public GroupSync(GroupsClient groupsClient, GroupConfig config, ILogger log, DataCache cache)
         {
-            GroupsClient = groupsClient;
+            _groupsClient = groupsClient;
             _groupConfig = config;
+            _log = log;
+            _cache = cache;
         }
 
-        protected abstract string Endpoint { get; }
-
-        public override async Task<DocumentRoot<List<TSource>>> GetInitialDataAsync(string? nextUrl)
+        public async Task InitializeAsync()
         {
             var channelTags =
-                await GroupsClient.GetAsync<List<Tag>>($"tag_groups/{_groupConfig.ChannelTagGroupId}/tags");
+                await _groupsClient.GetAsync<List<Tag>>($"tag_groups/{_groupConfig.ChannelTagGroupId}/tags");
             
-            Log.Information("Found {ChannelCount} channel tags: {ChannelTags}", channelTags.Data.Count,
+            _log.Information("Found {ChannelCount} channel tags: {ChannelTags}", channelTags.Data.Count,
                 channelTags.Data.Select(t => t.Name));
 
             _channels = new Dictionary<string, Tag>();
@@ -51,11 +57,7 @@ namespace Sync
             {
                 _channels[tag.Id!] = tag;
                 tag.Name = OrbitUtil.CleanChannelName(tag.Name);
-                if (_groupConfig.Clean)
-                {
-                    await CleanActivitiesAsync(tag.Name);    
-                }
-                
+
                 if (tag.Name == _groupConfig.IgnoreTagName)
                     _ignoreTag = tag;
             }
@@ -65,21 +67,15 @@ namespace Sync
                 throw new PlanningCenterException(
                     $"Failed to find the `{_groupConfig.IgnoreTagName}` tag. Found {string.Join(",", _channels.Values.Select(t => t.Name))}");
             }
-
-            return await GroupsClient.GetAsync<List<TSource>>(nextUrl ?? Endpoint);
         }
 
-        private Tag _ignoreTag = null!;
-
-        private Dictionary<string, Tag> _channels = null!;
-
-        protected async Task<GroupInfo> GetGroupInfo(string groupId)
+        public async Task<GroupInfo> GetGroupInfo(string groupId)
         {
-            return await Deps.Cache.GetOrAddEntity(groupId, async (_) =>
+            return await _cache.GetOrAddEntity(groupId, async (_) =>
             {
-                var groupDocument = await GroupsClient.GetAsync<GroupInfo>($"groups/{groupId}");
+                var groupDocument = await _groupsClient.GetAsync<GroupInfo>($"groups/{groupId}");
                 var group = groupDocument.Data!;
-                var tagsDocument = await GroupsClient.GetAsync<List<Tag>>(group.Links!["tags"].Href);
+                var tagsDocument = await _groupsClient.GetAsync<List<Tag>>(group.Links!["tags"].Href);
                 group.Tags = tagsDocument.Data;
                 foreach (var tag in group.Tags)
                 {

@@ -13,7 +13,7 @@ namespace PlanningCenter.Api.People
         public string Anniversary { get; set; }
         public string Gender { get; set; }
         public string Grade { get; set; }
-        public string Child { get; set; }
+        public bool Child { get; set; }
         public string GraduationYear { get; set; }
         public string SiteAdministrator { get; set; }
         public string AccountingAdministrator { get; set; }

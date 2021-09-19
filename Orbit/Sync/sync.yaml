@@ -1,5 +1,6 @@
 sync:
   mode: create
+  keyExistsMode: stop # can also specify 'skip' 
   defaultWorkspace: sam-workspace
   childWorkspace: foothills-children 
     
