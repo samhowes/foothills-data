@@ -15,12 +15,12 @@ sync:
     
   groupMembershipConfig: 
     weight: 6
-    activityType: Group Attendance
+    activityType: Joined Group
     
   groupAttendanceConfig: 
     leadershipWeight: 6
     normalWeight: 3
-    activityType: Group Attendance
+    activityType: Event Attendance
     
   checkInsConfig:
     channel: Worship
