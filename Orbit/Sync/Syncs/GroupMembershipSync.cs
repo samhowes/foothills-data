@@ -42,7 +42,6 @@ namespace Sync
         public override async Task InitializeAsync()
         {
             _batch = await _client.GetAsync<List<T>>(NextUrl);
-            NextUrl = _batch.Links.Self();
             Meta = _batch.Meta;
         }
 

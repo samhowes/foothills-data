@@ -1,8 +1,12 @@
 sync:
   mode: create
-  keyExistsMode: stop # can also specify 'skip' 
-  defaultWorkspace: sam-workspace # final workspace?
-  childWorkspace: sam-workspace # final workspace will be: familyministry 
+  keyExistsMode: skip # can also specify 'skip' 
+  defaultWorkspace: sam-test # final workspace?
+  childWorkspace: sam-foothills-children # final workspace will be: familyministry 
+  
+  peopleConfig:
+    metadataWorkspace: foothills
+    initial: false
     
   groupConfig:
     defaultChannel: BelongingAndCommunity
@@ -11,12 +15,12 @@ sync:
     
   groupMembershipConfig: 
     weight: 6
-    activityType: Group Attendance
+    activityType: Joined Group
     
   groupAttendanceConfig: 
     leadershipWeight: 6
     normalWeight: 3
-    activityType: Group Attendance
+    activityType: Event Attendance
     
   checkInsConfig:
     channel: Worship

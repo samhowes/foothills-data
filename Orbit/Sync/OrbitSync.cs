@@ -234,7 +234,7 @@ namespace Sync
             return true;
         }
 
-        public async Task<Member?> CreateMemberAsync(Person person)
+        public async Task<Member?> CreateMemberAsync(Person person, List<string>? tags = null)
         {
             LastDate = person.CreatedAt;
             SetChild(person);
@@ -244,18 +244,21 @@ namespace Sync
             await loader.GetUntil(person.CreatedAt);
             
             
-            var tags = new List<string>();
+            tags ??= new List<string>();
             if (person.Child)
                 tags.Add("child");
 
             var member = new UpsertMember()
             {
-                Url = PlanningCenterUtil.PersonLink(person.Id!),
-                Email = $"{person.Id}@foothillsuu.org",
-                Birthday = person.Birthdate,
-                Name = person.Name,
-                Slug = person.Id!,
-                TagsToAdd = string.Join(",", tags),
+                Member = new Member()
+                {
+                    Url = PlanningCenterUtil.PersonLink(person.Id!),
+                    Email = $"{person.Id}@foothillsuu.org",
+                    Birthday = person.Birthdate,
+                    Name = person.Name,
+                    Slug = person.Id!,
+                    TagsToAdd = string.Join(",", tags),
+                },
                 Identity = new OtherIdentity(source: Constants.PlanningCenterSource)
                 {
                     Name = person.Name,

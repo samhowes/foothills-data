@@ -25,6 +25,9 @@ namespace Sync
     public class SyncCommand
     {
         [Value(0, Required = true)] public string Action { get; set; }
+        
+        [Option('i', "initial")]
+        public bool Initial { get; set; }
     }
 
     public static class Program
@@ -50,6 +53,9 @@ namespace Sync
                 case "test":
                     return await VerifyApiAccess(provider);
                 case "sync":
+                    var peopleConfig = provider.GetRequiredService<PeopleConfig>();
+                    peopleConfig.Initial = peopleConfig.Initial || command.Initial;
+                    
                     var sync = provider.GetRequiredService<Orchestrator>();
                     return await sync.All();
                 default:
@@ -87,6 +93,7 @@ namespace Sync
                 .CreateLogger();
 
             LoadConfigs(services,
+                typeof(PeopleConfig),
                 typeof(CheckInsConfig),
                 typeof(DonationsConfig),
                 typeof(GroupConfig),
