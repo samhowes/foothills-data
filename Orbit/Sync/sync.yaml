@@ -1,8 +1,12 @@
 sync:
   mode: create
-  keyExistsMode: stop # can also specify 'skip' 
-  defaultWorkspace: sam-workspace # final workspace?
-  childWorkspace: sam-workspace # final workspace will be: familyministry 
+  keyExistsMode: skip # can also specify 'skip' 
+  defaultWorkspace: sam-test # final workspace?
+  childWorkspace: sam-foothills-children # final workspace will be: familyministry 
+  
+  peopleConfig:
+    metadataWorkspace: foothills
+    initial: false
     
   groupConfig:
     defaultChannel: BelongingAndCommunity

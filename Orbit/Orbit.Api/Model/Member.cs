@@ -38,7 +38,7 @@ namespace Orbit.Api.Model
         public string Location { get; set; }
 
 
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
 
         public string Pronouns { get; set; }
@@ -49,7 +49,7 @@ namespace Orbit.Api.Model
 
         public string TagsToAdd { get; set; }
 
-        public List<string> Tags { get; set; }
+        public List<string> TagList { get; set; }
         public string Tshirt { get; set; }
 
         public bool? Teammate { get; set; }
@@ -69,33 +69,5 @@ namespace Orbit.Api.Model
         public DateTime CreatedAt { get; set; }
 
         public Relationship<List<OtherIdentity>> Identities { get; set; }
-
-
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
-            sb.Append("class Member {\n");
-            sb.Append("  Bio: ").Append(Bio).Append("\n");
-            sb.Append("  Birthday: ").Append(Birthday).Append("\n");
-            sb.Append("  Company: ").Append(Company).Append("\n");
-            sb.Append("  Title: ").Append(Title).Append("\n");
-            sb.Append("  Location: ").Append(Location).Append("\n");
-            sb.Append("  Name: ").Append(Name).Append("\n");
-            sb.Append("  Pronouns: ").Append(Pronouns).Append("\n");
-            sb.Append("  ShippingAddress: ").Append(ShippingAddress).Append("\n");
-            sb.Append("  Slug: ").Append(Slug).Append("\n");
-            sb.Append("  TagsToAdd: ").Append(TagsToAdd).Append("\n");
-            sb.Append("  Tags: ").Append(Tags).Append("\n");
-            sb.Append("  Tshirt: ").Append(Tshirt).Append("\n");
-            sb.Append("  Teammate: ").Append(Teammate).Append("\n");
-            sb.Append("  Url: ").Append(Url).Append("\n");
-            sb.Append("  Github: ").Append(Github).Append("\n");
-            sb.Append("  Twitter: ").Append(Twitter).Append("\n");
-            sb.Append("  Email: ").Append(Email).Append("\n");
-            sb.Append("  Linkedin: ").Append(Linkedin).Append("\n");
-            sb.Append("  Devto: ").Append(Devto).Append("\n");
-            sb.Append("}\n");
-            return sb.ToString();
-        }
     }
 }

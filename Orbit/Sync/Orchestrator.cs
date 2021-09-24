@@ -60,8 +60,8 @@ namespace Sync
             _log.Information("Starting sync...");
             try
             {
-                // await PeopleToMembers();
-                await CheckInsToActivities();
+                await PeopleToMembers();
+                // await CheckInsToActivities();
                 // await sync.DonationsToActivities();
 
                 // await GroupAttendanceToActivities();
