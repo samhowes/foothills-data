@@ -20,7 +20,7 @@ jobs:
       run: dotnet build
     
     - name: Test Api Access
-      run: scripts/run.sh ${{ github.event.inputs.mode }}
+      run: scripts/run.sh test
       env:
         ORBIT_API_TOKEN: ${{ secrets.ORBIT_API_TOKEN }}
         PCO_APPLICATION_ID: ${{ secrets.PCO_APPLICATION_ID }}
