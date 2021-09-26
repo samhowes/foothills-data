@@ -23,7 +23,9 @@ sync:
     activityType: Event Attendance
     
   checkInsConfig:
-    channel: Worship
+    activityType: Event Check-in
+    activityTypeFilters:
+    - Worship
     weight: 5
     channelRegex: '(\(|\[)(ch)(annel)?:(?<channel>.*)(\)|\])'
     dateRanges:

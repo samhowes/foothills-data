@@ -68,7 +68,7 @@ namespace Sync
             return Task.FromResult(new ApiCursor<Person>(_peopleClient, url))!;
         }
 
-        public async Task ProcessItemAsync(Person person)
+        public async Task<SyncStatus> ProcessItemAsync(Person person)
         {
             if (!TryGetMetadata(person, out var memberMeta))
             {
@@ -100,15 +100,14 @@ namespace Sync
                 var maybeCreated = await _orbitSync.CreateMemberAsync(person, tags);
                 if (maybeCreated == null)
                 {
-                    _context.BatchProgress.Failed++;
-                    return;
+                    return SyncStatus.Failed;
                 }
                 
                 if (_syncConfig.KeyExistsMode == KeyExistsMode.Stop && maybeCreated.CreatedAt < now)
                 {
                     _context.BatchProgress.Skipped++;
                     _context.BatchProgress.Complete = true;
-                    return;
+                    return SyncStatus.Exists;
                 }
 
                 if (maybeCreated.Slug != person.Id)
@@ -116,6 +115,8 @@ namespace Sync
                     // for some reason, a second POST updates their slug
                     await _orbitSync.CreateMemberAsync(person, tags);
                 }
+
+                return SyncStatus.Success;
             }
             catch (ApiErrorException ex)
             {
@@ -123,11 +124,8 @@ namespace Sync
                 {
                     
                 }
-                _context.BatchProgress.Failed++;
-                return;
+                return SyncStatus.Failed;
             }
-            
-            _context.BatchProgress.Success++;
         }
 
         private bool TryGetMetadata(Person person, out Member? member)

@@ -8,6 +8,7 @@ using JsonApiSerializer.JsonApi;
 using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
+using PlanningCenter.Api.CheckIns;
 using Serilog;
 using Person = PlanningCenter.Api.People.Person;
 
@@ -16,7 +17,8 @@ namespace Sync
     public enum SyncMode
     {
         Create,
-        Update
+        Update,
+        Seek
     }
 
     public enum KeyExistsMode
@@ -113,18 +115,12 @@ namespace Sync
             return new DocumentRoot<List<TSource>>();
         }
 
-        public async Task UploadActivity<TSource, TActivitySource>(
-            Progress progress, TActivitySource source, UploadActivity activity, string personId)
+        public async Task<SyncStatus> UploadActivity<TSource, TActivitySource>(TActivitySource source, UploadActivity activity, string personId)
             where TActivitySource : EntityBase
         {
             LastDate = activity.OccurredAt;
-            var person = await _cache.GetOrAddEntity(personId, async (_) =>
-            {
-                var doc = await _peopleClient.GetAsync<Person>($"people/{personId}");
-                SetChild(doc.Data);
-                SetWorkspace(doc.Data);
-                return doc.Data;
-            });
+            var person = await GetPersonAsync(personId);
+            if (person == null) return SyncStatus.Ignored;
 
             try
             {
@@ -142,59 +138,63 @@ namespace Sync
                     (info != null && info.MaxDate < activity.OccurredAt))
                 {
                     await _orbitClient.CreateActivity(person.OrbitWorkspace, activity, identity);
-                    progress.Success++;
+                    return SyncStatus.Success;
                 }
-                else
-                {
-                    if (await UpsertActivity(person, source, activity, identity))
-                        progress.Success++;
-                }
+
+                await UpsertActivity(person, source, activity, identity);
+                return SyncStatus.Success;
             }
             catch (Exception ex)
             {
-                string? errorMessage;
-                if (ex is ApiException orbitException)
-                {
-                    if (ex.Message.Contains("has already been taken"))
-                    {
-                        switch (_config.KeyExistsMode)
-                        {
-                            case KeyExistsMode.Stop:
-                                _log.Information("Key {ActivityKey} already exists, assuming upload complete",
-                                    activity.Key);
-                                progress.Complete = true;
-                                return;
+                return await HandleApiError<TSource, TActivitySource>(source, activity, ex);
+            }
+        }
 
-                            case KeyExistsMode.Skip:
-                            default:
-                                _log.Debug("Skipping already uploaded activity");
-                                progress.Skipped++;
-                                return;
-                        }
+        private async Task<SyncStatus> HandleApiError<TSource, TActivitySource>(TActivitySource source, UploadActivity activity,
+            Exception ex) where TActivitySource : EntityBase
+        {
+            string? errorMessage = null;
+            if (ex is ApiException orbitException)
+            {
+                if (ex.Message.Contains("has already been taken"))
+                {
+                    switch (_config.KeyExistsMode)
+                    {
+                        case KeyExistsMode.Stop:
+                            _log.Information("Key {ActivityKey} already exists, assuming upload complete",
+                                activity.Key);
+                            break;
+
+                        case KeyExistsMode.Skip:
+                        default:
+                            _log.Debug("Skipping already uploaded activity");
+                            break;
                     }
 
-                    _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", source.Id,
-                        orbitException.Message);
-                    errorMessage = orbitException.Message;
-                }
-                else
-                {
-                    _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", source.Id);
-                    errorMessage = ex.StackTrace;
+                    return SyncStatus.Exists;
                 }
 
-                var mapping = new Mapping()
-                {
-                    PlanningCenterId = source.Id,
-                    Type = typeof(TActivitySource).Name,
-                    Error = errorMessage
-                };
-
-                _logDb.Add(mapping);
-                await _logDb.SaveChangesAsync();
-
-                progress.Failed++;
+                _log.Error("Orbit api error for PlanningCenterId {PlanningCenterId}: {ApiError}", source.Id,
+                    orbitException.Message);
+                errorMessage = orbitException.Message;
             }
+            else
+            {
+                _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", source.Id);
+                errorMessage = ex.StackTrace;
+            }
+
+            var mapping = new Mapping()
+            {
+                PlanningCenterId = source.Id,
+                Type = typeof(TActivitySource).Name,
+                Error = errorMessage
+            };
+
+            _logDb.Add(mapping);
+            await _logDb.SaveChangesAsync();
+
+            return SyncStatus.Failed;
         }
 
         private void SetWorkspace(Person person)
@@ -209,7 +209,7 @@ namespace Sync
             return person.Child;
         }
 
-        private async Task<bool> UpsertActivity<TActivitySource>(
+        private async Task UpsertActivity<TActivitySource>(
             Person person, TActivitySource source, UploadActivity activity, OtherIdentity identity)
             where TActivitySource : EntityBase
         {
@@ -230,8 +230,6 @@ namespace Sync
                 var updated = await _orbitClient.PutAsync<DocumentRoot<UploadActivity>>(
                     $"{person.OrbitWorkspace}/members/{person.Id}/activities/{activityId}", activity);
             }
-
-            return true;
         }
 
         public async Task<Member?> CreateMemberAsync(Person person, List<string>? tags = null)
@@ -306,6 +304,49 @@ namespace Sync
                     await _orbitClient.Delete($"members/{activity.Member.Slug}/activities/{activity.Id}");
                 }
             }
+        }
+
+        public async Task<Person?> GetPersonAsync(string personId)
+        {
+            return await _cache.GetOrAddEntity(personId, async (_) =>
+            {
+                try
+                {
+                    var doc = await _peopleClient.GetAsync<Person>($"people/{personId}");
+                    SetChild(doc.Data);
+                    SetWorkspace(doc.Data);
+                    return doc.Data;
+                }
+                catch (ApiErrorException ex)
+                {
+                    if (ex.Type != ErrorTypeEnum.NotFound) throw;
+                }
+
+                return null;
+            });
+        }
+
+        public async Task<ActivityBase?> GetActivity<TSource>(TSource item) where TSource : EntityBase
+        {
+            if (item is not IHavePerson personItem) return null;
+            if (personItem.Person == null) return null;
+            var person = await GetPersonAsync(personItem.Person.Id!);
+            if (person == null) return null;
+            var key = OrbitUtil.ActivityKey(item);
+            var url = UrlUtil.MakeUrl($"{person.OrbitWorkspace}/activities",
+                ("activity_tags", OrbitUtil.KeyTag(key)));
+            
+            try
+            {
+                var doc = await _orbitClient.GetAsync<List<ActivityBase>>(url);
+                return doc.Data.SingleOrDefault();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return null;
         }
     }
 }

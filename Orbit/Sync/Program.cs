@@ -115,8 +115,7 @@ namespace Sync
                 .AddTransient<DonationsToActivitiesSync>()
                 .AddTransient<GroupAttendanceSync>()
                 .AddTransient<GroupMembershipSync>()
-                .AddTransient<NotesToActivitiesSync>()
-                .AddSingleton(new SyncConfig(0));
+                .AddTransient<NotesToActivitiesSync>();
 
             var provider = services.BuildServiceProvider();
             return provider;
@@ -162,7 +161,7 @@ namespace Sync
         {
             var options = new DbContextOptionsBuilder<LogDbContext>();
 
-            if (true)
+            if (false)
             {
                 var connection = new SqliteConnection("Data Source=:memory:");
                 await connection.OpenAsync();

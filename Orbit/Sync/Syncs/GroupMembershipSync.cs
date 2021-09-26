@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
@@ -16,52 +15,6 @@ namespace Sync
         public string ActivityType { get; set; } = null!;
     }
 
-    public abstract class ApiCursor
-    {
-        public Meta Meta { get; protected set; } = null!;
-
-        public string? NextUrl { get; protected set; }
-        public abstract Task InitializeAsync();
-    }
-
-    public class ApiCursor<T> : ApiCursor
-    {
-
-        private readonly ApiClientBase _client;
-        private DocumentRoot<List<T>>? _batch;
-
-        public ApiCursor(ApiClientBase client, string nextUrl, string? name= null)
-        {
-            NextUrl = nextUrl;
-            _client = client;
-            Name = name ?? typeof(T).Name;
-        }
-
-        public string Name { get; }
-        
-        public override async Task InitializeAsync()
-        {
-            _batch = await _client.GetAsync<List<T>>(NextUrl);
-            Meta = _batch.Meta;
-        }
-
-        public List<T>? Data => _batch?.Data;
-
-        public async Task<bool> FetchNextAsync()
-        {
-            if (_batch == null)
-            {
-                await InitializeAsync();
-                return true;
-            }
-            NextUrl = _batch?.Links.Next();
-            if (string.IsNullOrEmpty(NextUrl)) return false;
-
-            _batch = await _client.GetAsync<List<T>>(NextUrl);
-            return true;
-        }
-    }
-    
     public class GroupMembershipSync : IMultiSync<Group, Membership>
     {
         private readonly SyncDeps _deps;
@@ -81,7 +34,6 @@ namespace Sync
         
         public async Task<ApiCursor<Group>> InitializeTopLevelAsync(SyncContext context)
         {
-            _context = context;
             await _groupsSync.InitializeAsync();
 
             var url = UrlUtil.MakeUrl("groups");
@@ -94,18 +46,17 @@ namespace Sync
             var group = context.GetData<Group>();
             var url = UrlUtil.MakeUrl($"groups/{group.Id}/memberships", ("order", "-joined_at"));
             var cursor = new ApiCursor<Membership>(_groupsClient, url, $"{group.Name}:Members");
+            _context = context;
             return Task.FromResult(cursor)!;
         }
 
-        public async Task ProcessItemAsync(Membership membership)
+        public async Task<SyncStatus> ProcessItemAsync(Membership membership)
         {
-            var progress = _context.BatchProgress;
             var group = await _groupsSync.GetGroupInfo(membership.Group.Id!);
 
             if (group.Ignore)
             {
-                progress.Skipped++;
-                return;
+                return SyncStatus.Ignored;
             }
 
             var activity = new UploadActivity(
@@ -118,7 +69,7 @@ namespace Sync
                 PlanningCenterUtil.GroupLink(group),
                 group.Name);
 
-            await _deps.OrbitSync.UploadActivity<Group, Membership>(progress, membership, activity,
+            return await _deps.OrbitSync.UploadActivity<Group, Membership>(membership, activity,
                 membership.Person.Id!);
         }
     }

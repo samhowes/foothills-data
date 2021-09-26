@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics;
@@ -20,7 +22,10 @@ namespace Sync
         
         [Key]
         public int? Id { get; set; }
-        public string? Type { get; set; }
+        [ForeignKey(nameof(Parent))]
+        public int? ParentId { get; set; }
+        public virtual Progress Parent { get; set; }
+        public string Type { get; set; }
         public string? NextUrl { get; set; }
         
         [NotMapped]
@@ -28,7 +33,8 @@ namespace Sync
         public int Skipped { get; set; }
         public int Success { get; set; }
         public int Failed { get; set; }
-        
+        public virtual ICollection<Progress> Children { get; set; } = new HashSet<Progress>();
+
         [NotMapped]
         public int Total => Skipped + Success + Failed;
         [NotMapped]
@@ -49,6 +55,27 @@ namespace Sync
         public void Dispose()
         {
             Timer.Stop();
+        }
+
+        public void RecordItem(SyncStatus result)
+        {
+            switch (result)
+            {
+                case SyncStatus.Ignored:
+                    Skipped++;
+                    break;
+                case SyncStatus.Exists:
+                    Skipped++;
+                    break;
+                case SyncStatus.Failed:
+                    Failed++;
+                    break;
+                case SyncStatus.Success:
+                    Success++;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -9,11 +10,11 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PlanningCenter.Api.CheckIns;
 using Serilog;
     
 namespace Sync
 {
-    public record SyncConfig(long MaxCount);
     public record BatchInfo(string Url, Meta Meta, Links Links);
 
     public interface ISync
@@ -23,7 +24,15 @@ namespace Sync
     public interface ISync<TSource> : ISync
     {
         Task<ApiCursor<TSource>?> InitializeAsync(SyncContext context);
-        Task ProcessItemAsync(TSource item);
+        Task<SyncStatus> ProcessItemAsync(TSource item);
+    }
+
+    public enum SyncStatus
+    {
+        Failed,
+        Ignored,
+        Exists,
+        Success
     }
 
     public interface IMultiSync<TTopLevel, TSource> : ISync<TSource>
@@ -36,13 +45,13 @@ namespace Sync
         private readonly ILogger _log;
         private readonly IServiceProvider _services;
         private readonly LogDbContext _logDb;
-        private readonly SyncConfig _config;
+        private readonly SyncImplConfig _config;
         private readonly OrbitSync _orbitSync;
         private readonly List<SyncStats> _syncs;
         private FilesConfig _filesConfig;
 
 
-        public Orchestrator(ILogger log, IServiceProvider services, LogDbContext logDb, SyncConfig config, 
+        public Orchestrator(ILogger log, IServiceProvider services, LogDbContext logDb, SyncImplConfig config, 
             SyncDeps deps, FilesConfig filesConfig)
         {
             _log = log;
@@ -60,14 +69,14 @@ namespace Sync
             _log.Information("Starting sync...");
             try
             {
-                await PeopleToMembers();
+                // await PeopleToMembers();
                 // await CheckInsToActivities();
-                // await sync.DonationsToActivities();
+                // await DonationsToActivities();
 
                 // await GroupAttendanceToActivities();
                 // await GroupMembershipToActivities();
 
-                // await sync.NotesToActivities();
+                // await NotesToActivities();
             }
             catch (Exception e)
             {
@@ -130,6 +139,8 @@ namespace Sync
 
             var context = await InitializeSync(impl);
 
+            var children = context.OverallProgress.Children.ToDictionary(c => c.Type);
+
             var topCursor = await impl.InitializeTopLevelAsync(context);
 
             await RecordStart(context, topCursor);
@@ -141,16 +152,38 @@ namespace Sync
                 {
                     foreach (var topLevel in topCursor!.Data!)
                     {
-                        var childContext = context.MakeChild();
+                        var type = context.OverallProgress.Type + ":" + topLevel.Id;
+
+                        if (!children.TryGetValue(type, out var childProgress))
+                        {
+                            childProgress = new Progress()
+                            {
+                                Type = type
+                            };
+                            context.OverallProgress.Children.Add(childProgress);
+                        }
+                        else
+                        {
+                            if (childProgress.Complete) continue;
+                        }
+
+                        var childContext = context.MakeChild(childProgress);
                         childContext.SetData(topLevel);
+                        
                         var cursor = await impl.InitializeAsync(childContext);
                         if (cursor == null) continue;
                             
                         await cursor.InitializeAsync();
                         var thisCount = cursor.Meta.TotalCount();
                         _log.Information("{CursorName} has {ThisCount} records", cursor.Name, thisCount);
+
+                        if (cursor.Data!.Any())
+                        {
+                            await ProcessCursorAsync(impl, cursor, childContext, context.OverallProgress);
+                        }
                         
-                        await ProcessCursorAsync(impl, cursor, childContext);
+                        childContext.OverallProgress.Complete = true;
+                        await _logDb.SaveChangesAsync();
                     }
 
                     if (!await topCursor.FetchNextAsync()) break;
@@ -163,7 +196,9 @@ namespace Sync
         private async Task<SyncContext> InitializeSync(ISync impl)
         {
             var name = impl.GetType().Name;
-            var progress = await _logDb.Progress.SingleOrDefaultAsync(p => p.Type == name);
+            var progress = await _logDb.Progress
+                .Include(p => p.Children)
+                .SingleOrDefaultAsync(p => p.Type == name);
 
             if (progress != null)
             {
@@ -194,12 +229,12 @@ namespace Sync
             var context = await InitializeSync(impl);
             var cursor = await impl.InitializeAsync(context);
             
-            await RecordStart(context, cursor);
+            await RecordStart(context, cursor!);
 
             using (context.OverallProgress)
             {
                 context.OverallProgress.Timer.Start();
-                await ProcessCursorAsync(impl, cursor, context);
+                await ProcessCursorAsync(impl, cursor, context, context.OverallProgress);
             }
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
             record.Record(context.OverallProgress);
@@ -221,39 +256,79 @@ namespace Sync
                 cursor.Meta.Count(), cursor.Meta.PageCount());
         }
 
+        private enum CursorState
+        {
+            ProcessAll,
+            FindBatch,
+            EnsureCompleteness
+        }
         private async Task ProcessCursorAsync<TSource>(ISync<TSource> impl, ApiCursor<TSource> cursor, 
-            SyncContext context)
+            SyncContext context, Progress progress)
             where TSource : EntityBase
         {
-            var progress = context.OverallProgress;
+            var state = _config.Mode == SyncMode.Seek ? CursorState.FindBatch : CursorState.ProcessAll;
             for (;;)
             {
                 using var batchStats = new Progress();
                 context.BatchProgress = batchStats;
                 batchStats.Timer.Start();
 
-                foreach (var item in cursor.Data)
+                for (var i = 0; i < cursor.Data!.Count; i++)
                 {
-                    await impl.ProcessItemAsync(item);
+                    var item = cursor.Data![i];
+                    if (state != CursorState.ProcessAll)
+                    {
+                        var existing = await _orbitSync.GetActivity(item);
+                        if (existing != null)
+                        {
+                            if (state == CursorState.FindBatch)
+                            {
+                                batchStats.Skipped += cursor.Data.Count - i;
+                                break;    
+                            }
+
+                            if (state == CursorState.EnsureCompleteness)
+                            {
+                                batchStats.Skipped++;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            if (state == CursorState.FindBatch)
+                            {
+                                await cursor.FetchPreviousAsync();
+                                await cursor.FetchPreviousAsync();
+                                i = 0;
+                                state = CursorState.EnsureCompleteness;
+                                continue;
+                            }
+
+                            state = CursorState.ProcessAll;
+                        }
+                    }
                     
-                    if (batchStats.Complete) break;
+                    var result = await impl.ProcessItemAsync(item);
+                    batchStats.RecordItem(result);
                 }
 
                 progress.TotalTime += progress.Timer.ElapsedMilliseconds;
                 Report<TSource>(batchStats, progress, cursor.Meta);
                 await _logDb.SaveChangesAsync();
-                if (_config.MaxCount > 0 && progress.Success >= _config.MaxCount)
-                {
-                    _log.Information("MaxCount of {MaxCount} exceeded with {SuccessCount}",
-                        _config.MaxCount, progress.Success);
-                    break;
-                }
 
-                
                 if (batchStats.Complete) break;
-                if (!await cursor.FetchNextAsync()) break;
+                if (!await cursor.FetchNextAsync())
+                {
+                    if (state == CursorState.FindBatch)
+                    {
+                        state = CursorState.EnsureCompleteness;
+                        // make sure the entire last batch was uploaded
+                        batchStats.Skipped -= cursor.Data.Count;
+                    }
+                    else break;
+                }
                 
-                progress.NextUrl = cursor.NextUrl;
+                context.OverallProgress.NextUrl = cursor.NextUrl;
                 await _logDb.SaveChangesAsync();
             }
         }
@@ -316,9 +391,13 @@ namespace Sync
         public void SetData<T>(T data) => _data[typeof(T)] = data!; 
         public T GetData<T>() => (T)_data[typeof(T)]!;
 
-        public SyncContext MakeChild()
+        public SyncContext MakeChild(Progress progress)
         {
-            return new SyncContext(_data){OverallProgress = OverallProgress};
+            return new SyncContext(_data)
+            {
+                NextUrl = progress.NextUrl,
+                OverallProgress = progress
+            };
         }
     }
 }

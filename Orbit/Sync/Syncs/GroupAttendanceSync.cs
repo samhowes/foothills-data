@@ -35,7 +35,6 @@ namespace Sync
         
         public async Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
         {
-            _context = context;
             await _groupSync.InitializeAsync();
             var url = context.NextUrl ?? UrlUtil.MakeUrl("events",
                 ("order", "-starts_at"),
@@ -59,17 +58,16 @@ namespace Sync
                 return null;
             }
 
+            _context = context;
             _context.SetData(group);
             return new ApiCursor<Attendance>(_groupsClient, $"events/{@event.Id}/attendances", $"{group.Name}:Attendance");
         }
 
-        public async Task ProcessItemAsync(Attendance attendance)
+        public async Task<SyncStatus> ProcessItemAsync(Attendance attendance)
         {
-            var progress = _context.BatchProgress;
             if (!attendance.Attended)
             {
-                progress.Skipped++;
-                return;
+                return SyncStatus.Ignored;
             }
             
             var group = _context.GetData<GroupInfo>();
@@ -91,8 +89,7 @@ namespace Sync
                 "Event"
             );
 
-            await _deps.OrbitSync.UploadActivity<Group, Attendance>(progress, attendance, activity, attendance.Person.Id!);
-            
+            return await _deps.OrbitSync.UploadActivity<Group, Attendance>(attendance, activity, attendance.Person.Id!);
         }
     }
 }

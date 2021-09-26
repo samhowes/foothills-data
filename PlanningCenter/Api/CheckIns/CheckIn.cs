@@ -5,7 +5,12 @@ using JsonApiSerializer.JsonApi;
 
 namespace PlanningCenter.Api.CheckIns
 {
-    public class CheckIn : EntityBase
+    public interface IHavePerson
+    {
+        Person? Person { get; set; }
+    }
+    
+    public class CheckIn : EntityBase, IHavePerson
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }

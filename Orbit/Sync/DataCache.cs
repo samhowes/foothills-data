@@ -7,7 +7,7 @@ namespace Sync
 {
     public class DataCache
     {
-        private readonly Dictionary<string, object> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, object?> _cache = new(StringComparer.OrdinalIgnoreCase);
 
         private const string Mapping = "mapping";
         private const string Entity = "entity";
@@ -51,15 +51,18 @@ namespace Sync
             }
         }
 
-        public async Task<T> GetOrAddEntity<T>(string key, Func<string, Task<T>> func) where T : EntityBase
+        public async Task<T?> GetOrAddEntity<T>(string key, Func<string, Task<T?>> func) where T : EntityBase
         {
             if (!TryGetEntity<T>(key, out var entity))
             {
                 entity = await func(key);
-                SetEntity(entity);
+                lock (_cache)
+                {
+                    _cache[Key<T>(Entity, key!)] = entity;
+                }
             }
 
-            return entity!;
+            return entity;
         }
         
         public async Task<string?> GetOrAddMapping<T>(string entityId, Func<string, Task<string?>> func) where T : EntityBase

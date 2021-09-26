@@ -43,22 +43,20 @@ namespace Sync
             return Task.FromResult(new ApiCursor<Donation>(_givingClient, url));
         }
 
-        public async Task ProcessItemAsync(Donation donation)
+        public async Task<SyncStatus> ProcessItemAsync(Donation donation)
         {
             var progress = _context.BatchProgress;
             if (donation.Refunded)
             {
                 _deps.Log.Debug("Ignoring refunded donation {DonationId}", donation.Id);
-                progress.Skipped++;
-                return;
+                return SyncStatus.Ignored;
             }
 
             if (donation.Person == null)
             {
                 _deps.Log.Debug("Ignoring donation with no person attached: {DonationLink}, Batch: {BatchId}", 
                     PlanningCenterUtil.DonationLink(donation), donation.Batch?.Id);
-                progress.Skipped++;
-                return;
+                return SyncStatus.Ignored;
             }
 
             foreach (var designation in donation.Designations.Data)
@@ -87,10 +85,13 @@ namespace Sync
                     "Donation"
                 );
                 
-                await _deps.OrbitSync.UploadActivity<Donation, Designation>(
-                    progress, designation, activity, donation.Person.Id!);
-                if (progress.Complete) return;
+                var status = await _deps.OrbitSync.UploadActivity<Donation, Designation>(
+                    designation, activity, donation.Person.Id!);
+                _context.BatchProgress.RecordItem(status);
             }
+
+            _context.BatchProgress.Success--;
+            return SyncStatus.Success;
         }
     }
 }

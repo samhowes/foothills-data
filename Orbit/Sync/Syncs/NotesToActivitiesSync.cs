@@ -45,7 +45,6 @@ namespace Sync
         private readonly PeopleClient _peopleClient;
         private readonly NotesConfig _config;
         private readonly OrbitSync _orbitSync;
-        private SyncContext _context = null!;
 
         public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config, OrbitSync orbitSync)
         {
@@ -57,20 +56,17 @@ namespace Sync
 
         public Task<ApiCursor<Note>?> InitializeAsync(SyncContext context)
         {
-            _context = context;
             var url = context.NextUrl ?? UrlUtil.MakeUrl("notes",
                 ("order", "-created_at"));
             return Task.FromResult(new ApiCursor<Note>(_peopleClient, url))!;
         }
 
-        public async Task ProcessItemAsync(Note note)
+        public async Task<SyncStatus> ProcessItemAsync(Note note)
         {
-            var progress = _context.BatchProgress;
             if (!_config.CategoriesDict.TryGetValue(note.NoteCategory.Id!, out var categoryInfo))
             {
                 _deps.Log.Debug("Ignoring note with category {NoteCategoryId}", note.NoteCategory.Id);
-                progress.Skipped++;
-                return;
+                return SyncStatus.Ignored;
             }
 
             var noteCategory = await _deps.Cache.GetOrAddEntity(note.NoteCategory.Id!, async (categoryId) =>
@@ -92,11 +88,7 @@ namespace Sync
 
                 builder.Append(" was added by ");
 
-                var noteTaker = await _deps.Cache.GetOrAddEntity(note.CreatedBy.Id!, async (personId) =>
-                {
-                    var document = await _peopleClient.GetAsync<Person>($"people/{personId}");
-                    return document.Data;
-                });
+                var noteTaker = await _deps.OrbitSync.GetPersonAsync(note.CreatedBy.Id!);
 
                 builder.Append(noteTaker.FirstName);
                 title = builder.ToString();
@@ -116,7 +108,7 @@ namespace Sync
             if (categoryInfo.CopyContent)
                 activity.Description = note.Value;
 
-            await _orbitSync.UploadActivity<Note,Note>(progress, note, activity, note.Person.Id!);
+            return await _orbitSync.UploadActivity<Note,Note>(note, activity, note.Person.Id!);
         }
     }
 }
