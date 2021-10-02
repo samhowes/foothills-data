@@ -70,23 +70,7 @@ namespace Sync
 
         public async Task<SyncStatus> ProcessItemAsync(Person person)
         {
-            if (!TryGetMetadata(person, out var memberMeta))
-            {
-                for (;;)
-                {
-                    if (!await _memberCursor.FetchNextAsync()) break;
-                    foreach (var member in _memberCursor.Data!)
-                    {
-                        _cache.SetEntity(member);
-                        var personId = member.Email.Split("@")[0];
-                        _cache.SetMapping<Person>(personId, member.Id!);
-                    }
-
-                    if (TryGetMetadata(person, out memberMeta)) break;
-                    var last = _memberCursor.Data.Last();
-                    if (last.Name != null && person.FirstName[0] < last.Name[0]) break;
-                }
-            }
+            var memberMeta = await GetMetadata(person);
             
             List<string> tags = new();
             if (memberMeta != null && memberMeta.TagList.Any())
@@ -95,9 +79,10 @@ namespace Sync
             }
             
             var now = DateTime.Now.ToUniversalTime();
+            Member? maybeCreated = null;
             try
             {
-                var maybeCreated = await _orbitSync.CreateMemberAsync(person, tags);
+                maybeCreated = await _orbitSync.CreateMemberAsync(person, tags);
                 if (maybeCreated == null)
                 {
                     return SyncStatus.Failed;
@@ -109,23 +94,93 @@ namespace Sync
                     _context.BatchProgress.Complete = true;
                     return SyncStatus.Exists;
                 }
-
-                if (maybeCreated.Slug != person.Id)
-                {
-                    // for some reason, a second POST updates their slug
-                    await _orbitSync.CreateMemberAsync(person, tags);
-                }
-
-                return SyncStatus.Success;
             }
             catch (ApiErrorException ex)
             {
-                if (ex.Type == ErrorTypeEnum.AlreadyTaken)
+                if (ex.Type != ErrorTypeEnum.AlreadyTaken)
                 {
-                    
+                    return SyncStatus.Failed;
                 }
-                return SyncStatus.Failed;
+
+                var doc = await _orbitClient.GetAsync<Member>(
+                    UrlUtil.MakeUrl($"{person.OrbitWorkspace}/members/find",
+                        ("uid", person.Id),
+                        ("source", Constants.PlanningCenterSource)));
+                if (doc == null) return SyncStatus.Failed;
+                await _orbitSync.UpdateMemberAsync(doc.Data.Id!, person, tags);
+
+                try
+                {
+                    await _orbitClient.PostAsync<OtherIdentity>(
+                        $"{person.OrbitWorkspace}/members/{doc.Data.Id}/identities",
+                        new OtherIdentity("email")
+                        {
+                            Email = $"{person.Id}@foothillsuu.org"
+                        });
+                }
+                catch
+                {
+                    // ignored
+                }
+                
+                return SyncStatus.Success;
             }
+
+            if (maybeCreated.Slug != person.Id)
+            {
+                // for some reason, a second POST updates their slug
+                await _orbitSync.CreateMemberAsync(person, tags);
+                
+            }
+            return SyncStatus.Success;
+        }
+
+        private async Task<Member?> GetMetadata(Person person)
+        {
+            if (TryGetMetadata(person, out var memberMeta)) return memberMeta;
+            if (_config.Initial)
+            {
+                for (;;)
+                {
+                    if (!await _memberCursor.FetchNextAsync()) break;
+                    foreach (var member in _memberCursor.Data!)
+                    {
+                        SetMetadata(member);
+                    }
+
+                    if (TryGetMetadata(person, out memberMeta)) break;
+                    var last = _memberCursor.Data.Last();
+                    if (last.Name != null && person.FirstName[0] < last.Name[0]) break;
+                }    
+            }
+            else
+            {
+                try
+                {
+                    var doc = await _orbitClient.GetAsync<Member>(
+                        UrlUtil.MakeUrl($"{_config.MetadataWorkspace}/members/find",
+                            ("email", $"{person.Id}@foothillsuu.org"),
+                            ("source", "email")));
+                    memberMeta = doc.Data;
+                    if (memberMeta != null)
+                    {
+                        SetMetadata(memberMeta);    
+                    }
+                }
+                catch (ApiErrorException ex)
+                {
+                    if (ex.Type != ErrorTypeEnum.NotFound) throw;
+                }
+            }
+            
+            return memberMeta;
+        }
+
+        private void SetMetadata(Member member)
+        {
+            _cache.SetEntity(member);
+            var personId = member.Email.Split("@")[0];
+            _cache.SetMapping<Person>(personId, member.Id!);
         }
 
         private bool TryGetMetadata(Person person, out Member? member)
