@@ -70,11 +70,11 @@ namespace Sync
             try
             {
                 // await PeopleToMembers();
-                // await CheckInsToActivities();
-                // await DonationsToActivities();
+                await CheckInsToActivities();
+                await DonationsToActivities();
 
-                // await GroupAttendanceToActivities();
-                // await GroupMembershipToActivities();
+                await GroupAttendanceToActivities();
+                await GroupMembershipToActivities();
 
                 // await NotesToActivities();
             }
@@ -310,6 +310,11 @@ namespace Sync
                     
                     var result = await impl.ProcessItemAsync(item);
                     batchStats.RecordItem(result);
+                    if (result == SyncStatus.Exists && _config.KeyExistsMode == KeyExistsMode.Stop)
+                    {
+                        batchStats.Complete = true;
+                        break;
+                    }
                 }
 
                 progress.TotalTime += progress.Timer.ElapsedMilliseconds;

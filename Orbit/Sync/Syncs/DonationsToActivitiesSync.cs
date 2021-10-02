@@ -87,6 +87,7 @@ namespace Sync
                 
                 var status = await _deps.OrbitSync.UploadActivity<Donation, Designation>(
                     designation, activity, donation.Person.Id!);
+                if (status != SyncStatus.Success) return status;
                 _context.BatchProgress.RecordItem(status);
             }
 

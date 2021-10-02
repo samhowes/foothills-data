@@ -1,8 +1,8 @@
 sync:
-  mode: create
-  keyExistsMode: skip # can also specify 'skip' 
-  defaultWorkspace: sam-test # final workspace?
-  childWorkspace: sam-foothills-children # final workspace will be: familyministry 
+  mode: create                            # can specify 'create|update'
+  keyExistsMode: stop                     # can specify 'skip|stop' 
+  defaultWorkspace: sam-test              # final workspace?
+  childWorkspace: sam-foothills-children  # final workspace will be: familyministry 
   
   peopleConfig:
     metadataWorkspace: foothills
@@ -24,8 +24,9 @@ sync:
     
   checkInsConfig:
     activityType: Event Check-in
-    activityTypeFilters:
-    - Worship
+    overrides:
+    - activityType: Worship Attendance
+      channel: Worship
     weight: 5
     channelRegex: '(\(|\[)(ch)(annel)?:(?<channel>.*)(\)|\])'
     dateRanges:
@@ -63,7 +64,7 @@ sync:
 
     - categories:
       - 225
-      activityName: Caring Contact
+      activityType: Caring Contact
       channel: Caring
       weight: 3
       copyContent: true

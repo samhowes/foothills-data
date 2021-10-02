@@ -24,13 +24,15 @@ namespace Sync
         private readonly string _activityType;
         private readonly SyncDeps _deps;
         private readonly OrbitApiClient _orbitClient;
+        private string? _url;
         private readonly OrbitInfo _info;
         private Progress _progress = null!;
 
-        public ActivityLoader(string activityType, OrbitApiClient orbitClient)
+        public ActivityLoader(string activityType, OrbitApiClient orbitClient, string? url = null)
         {
             _activityType = activityType;
             _orbitClient = orbitClient;
+            _url = url;
             _info = new OrbitInfo();
         }
 
@@ -41,7 +43,8 @@ namespace Sync
 
             if (_progress == null)
             {
-                _progress = new Progress(type, $"activities?items=100&direction=DESC&sort=occurred_at");
+                _url ??= $"activities?items=100&direction=DESC&sort=occurred_at";
+                _progress = new Progress(type, _url);
                 _deps.LogDb.Add(_progress);
             }
 

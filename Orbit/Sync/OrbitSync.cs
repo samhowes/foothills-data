@@ -118,6 +118,10 @@ namespace Sync
         public async Task<SyncStatus> UploadActivity<TSource, TActivitySource>(TActivitySource source, UploadActivity activity, string personId)
             where TActivitySource : EntityBase
         {
+            if (string.IsNullOrEmpty(activity.ActivityType))
+            {
+                throw new ArgumentException("No activity type specified", nameof(activity));
+            }
             LastDate = activity.OccurredAt;
             var person = await GetPersonAsync(personId);
             if (person == null) return SyncStatus.Ignored;
@@ -215,6 +219,11 @@ namespace Sync
         {
             if (!_cache.TryGetMapping(source, out var activityId))
             {
+                var existing = await GetActivity(source);
+                activityId = existing?.Id;
+            }
+            if (activityId == null)
+            {
                 await _orbitClient.CreateActivity(person.OrbitWorkspace, activity, identity!);
             }
             else
@@ -232,6 +241,15 @@ namespace Sync
             }
         }
 
+        public async Task UpdateMemberAsync(string memberId, Person person, List<string>?tags = null)
+        {
+            LastDate = person.CreatedAt;
+            SetChild(person);
+            SetWorkspace(person);
+            var member = MakeMember(person, tags);
+            await _orbitClient.PutAsync<Member>($"{person.OrbitWorkspace}/members/{memberId}", member);
+        }
+        
         public async Task<Member?> CreateMemberAsync(Person person, List<string>? tags = null)
         {
             LastDate = person.CreatedAt;
@@ -241,25 +259,17 @@ namespace Sync
             var loader = _loaders[person.OrbitWorkspace];
             await loader.GetUntil(person.CreatedAt);
             
-            
             tags ??= new List<string>();
             if (person.Child)
                 tags.Add("child");
 
+            var memberEntity = MakeMember(person, tags);
             var member = new UpsertMember()
             {
-                Member = new Member()
-                {
-                    Url = PlanningCenterUtil.PersonLink(person.Id!),
-                    Email = $"{person.Id}@foothillsuu.org",
-                    Birthday = person.Birthdate,
-                    Name = person.Name,
-                    Slug = person.Id!,
-                    TagsToAdd = string.Join(",", tags),
-                },
+                Member = memberEntity,
                 Identity = new OtherIdentity(source: Constants.PlanningCenterSource)
                 {
-                    Name = person.Name,
+                    // Name = person.Name,
                     Uid = person.Id,
                     Url = PlanningCenterUtil.PersonLink(person.Id!),
                 }
@@ -285,6 +295,20 @@ namespace Sync
                 _log.Error(ex, "Unexpected error for PlanningCenterId {PlanningCenterId}", person.Id);
             }
             return null;
+        }
+
+        private static Member MakeMember(Person person, List<string>? tags)
+        {
+            var memberEntity = new Member()
+            {
+                Url = PlanningCenterUtil.PersonLink(person.Id!),
+                Email = $"{person.Id}@foothillsuu.org",
+                Birthday = person.Birthdate,
+                Name = person.Name,
+                Slug = person.Id!,
+                TagsToAdd = string.Join(",", tags),
+            };
+            return memberEntity;
         }
 
         public async Task CleanActivitiesAsync(string channel)

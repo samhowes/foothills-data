@@ -10,14 +10,27 @@ using PlanningCenter.Api.CheckIns;
 
 namespace Sync
 {
-    public record CheckInsConfig 
+    public record CheckInsConfig : IPostProcessConfig
     {
         public List<DateRangeConfig> DateRanges { get; set; } = null!;
         public decimal Weight { get; set; }
         public string ChannelRegex { get; set; }
         
         public string ActivityType { get; set; }
-        public HashSet<string> ActivityTypeFilters { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<ActivityOverride> Overrides { get; set; }
+
+        public class ActivityOverride
+        {
+            public string ActivityType { get; set; }
+            public string Channel { get; set; }
+        }
+
+        public void PostProcess()
+        {
+            OverridesDict = Overrides.ToDictionary(o => o.Channel);
+        }
+
+        public Dictionary<string,ActivityOverride> OverridesDict { get; set; }
     }
 
     public class DateRangeConfig
@@ -48,31 +61,19 @@ namespace Sync
             _eventChannelRegex = new Regex(config.ChannelRegex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
-        public async Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
+        public Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
         {
-            if (context.NextUrl?.Contains("check_ins") == true)
-            {
-                var data = await _checkInsClient.GetAsync<List<CheckIn>>(context.NextUrl);
-                var eventId = data.Data[0].EventTimes.Data[0].Event.Id;
-                var search = new ApiCursor<Event>(_checkInsClient, UrlUtil.MakeUrl("events"), "Events");
-                await foreach (var ev in search.GetAllAsync())
-                {
-                    if (ev.Id == eventId) break;
-                }
-
-                context.NextUrl = search.NextUrl;
-            }
             var url = context.NextUrl ?? UrlUtil.MakeUrl("events");
             var cursor = new ApiCursor<Event>(_checkInsClient, url, "Events");
-            // return Task.FromResult(cursor);
-            return cursor;
+            return Task.FromResult(cursor);
+            // return cursor;
         }
 
         public async Task<ApiCursor<CheckIn>?> InitializeAsync(SyncContext context)
         {
             _childContext = context;
             var @event = context.GetData<Event>();
-
+            
             var match = _eventChannelRegex.Match(@event.Name);
             if (!match.Success)
             {
@@ -83,7 +84,7 @@ namespace Sync
             @event.Name = @event.Name.Substring(0, match.Index).Trim();
             
             var channel = match.Groups["channel"].Value;
-            
+
             var details = await _checkInsClient.GetAsync<Event>(@event.Links.Self());
             
             var url = context.NextUrl ?? UrlUtil.MakeUrl(details.Data.Links!["check_ins"].Href,
@@ -108,11 +109,12 @@ namespace Sync
                 _deps.Log.Error("double locations!");
 
             var info = _childContext!.GetData<EventInfo>();
-            async Task<SyncStatus> CreateActivity(string? checkInName, string type)
+            async Task<SyncStatus> CreateActivity(string? checkInName, string type, string? title = null)
             {
-                var title = "Checked in";
-                if (checkInName != null)
+                if (title == null)
                 {
+                    title = "Checked in";
+                    checkInName ??= info.Event.Name;
                     title += $" for {checkInName}";
                 }
                 
@@ -131,17 +133,22 @@ namespace Sync
                     checkIn.Person.Id!);
             }
 
-            if (!_config.ActivityTypeFilters.Contains(info.Channel))
+            var activityType = _config.ActivityType;
+            if (_config.OverridesDict.TryGetValue(info.Channel!, out var @override))
             {
-                return await CreateActivity(info.Event.Name, _config.ActivityType);
+                activityType = @override.ActivityType;
             }
-            
+
             foreach (var eventTime in checkIn.EventTimes.Data)
             {
                 SyncStatus status;
                 if (!checkIn.Locations.Data.Any())
                 {
-                    status = await CreateActivity(eventTime.Name, info.Event.Name);
+                    if (@override != null)
+                    {
+                        activityType = $"In Person {activityType}";
+                    }
+                    status = await CreateActivity(eventTime.Name, activityType);
                     _childContext.BatchProgress.RecordItem(status);
                 }
                 else
@@ -154,7 +161,7 @@ namespace Sync
 
                         var prefix = dateRangeConfig.Locations ? location.Name : dateRangeConfig.ActivityType;
 
-                        status = await CreateActivity(eventTime.Name!, $"{prefix} {info.Event.Name}");
+                        status = await CreateActivity(eventTime.Name!, $"{prefix} {activityType}");
                         _childContext.BatchProgress.RecordItem(status);
                     }
                 }
