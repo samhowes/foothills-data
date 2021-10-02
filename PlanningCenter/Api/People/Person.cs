@@ -3,7 +3,7 @@ using JsonApi;
 
 namespace PlanningCenter.Api.People
 {
-    public class Person : EntityBase
+    public class Person : EntityBase, IPerson
     {
         public string GivenName { get; set; }
         public string FirstName { get; set; }

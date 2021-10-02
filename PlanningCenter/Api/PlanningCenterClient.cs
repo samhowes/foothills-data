@@ -36,6 +36,15 @@ namespace PlanningCenter.Api
         }
     }
 
+    public interface IPerson
+    {
+        public string? Id { get; set; }
+    }
+    
+    public interface IHavePerson
+    {
+        IPerson? Person { get; }
+    }
     public class PlanningCenterClient : ApiClientBase
     {
         public PlanningCenterClient(HttpClient httpClient, ILogger log) : base(log, httpClient)

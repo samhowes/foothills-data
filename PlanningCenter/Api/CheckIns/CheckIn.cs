@@ -5,11 +5,6 @@ using JsonApiSerializer.JsonApi;
 
 namespace PlanningCenter.Api.CheckIns
 {
-    public interface IHavePerson
-    {
-        Person? Person { get; set; }
-    }
-    
     public class CheckIn : EntityBase, IHavePerson
     {
         public string FirstName { get; set; }
@@ -26,6 +21,7 @@ namespace PlanningCenter.Api.CheckIns
         public string EventPeriodId { get; set; }
         public EventPeriod EventPeriod { get; set; }
         public Person? Person { get; set; }
+        IPerson? IHavePerson.Person => Person;
         
         public Relationship<List<EventTime>> EventTimes { get; set; }
         public Relationship<List<Location>> Locations { get; set; }

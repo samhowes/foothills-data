@@ -15,7 +15,7 @@ namespace Sync
     public record NoteCategoryInfo
     {
         public string Channel { get; set; }
-        public string Type { get; set; }
+        public string ActivityType { get; set; }
         public decimal Weight { get; set; }
         public string? Title { get; set; }
         public bool CopyContent { get; set; }
@@ -45,13 +45,16 @@ namespace Sync
         private readonly PeopleClient _peopleClient;
         private readonly NotesConfig _config;
         private readonly OrbitSync _orbitSync;
+        private SyncImplConfig _syncConfig;
 
-        public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config, OrbitSync orbitSync)
+        public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config, OrbitSync orbitSync, 
+            SyncImplConfig syncConfig)
         {
             _deps = deps;
             _peopleClient = peopleClient;
             _config = config;
             _orbitSync = orbitSync;
+            _syncConfig = syncConfig;
         }
 
         public Task<ApiCursor<Note>?> InitializeAsync(SyncContext context)
@@ -96,7 +99,7 @@ namespace Sync
 
             var activity = new UploadActivity(
                 categoryInfo.Channel,
-                categoryInfo.Type,
+                categoryInfo.ActivityType,
                 OrbitUtil.ActivityKey(note),
                 note.CreatedAt,
                 categoryInfo.Weight,
@@ -107,6 +110,15 @@ namespace Sync
 
             if (categoryInfo.CopyContent)
                 activity.Description = note.Value;
+
+            if (_syncConfig.Mode == SyncMode.Update)
+            {
+                var existing = await _orbitSync.GetActivity(note);
+                if (existing != null)
+                {
+                    _deps.Cache.SetMapping<Note>(note.Id!, existing.Id);    
+                }
+            }
 
             return await _orbitSync.UploadActivity<Note,Note>(note, activity, note.Person.Id!);
         }

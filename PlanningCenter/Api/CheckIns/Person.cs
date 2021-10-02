@@ -2,7 +2,7 @@ using JsonApi;
 
 namespace PlanningCenter.Api.CheckIns
 {
-    public class Person : EntityBase
+    public class Person : EntityBase, IPerson
     {
         public string Addresses { get; set; }
         public string EmailAddresses { get; set; }
