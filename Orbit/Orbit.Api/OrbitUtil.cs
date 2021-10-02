@@ -48,5 +48,10 @@ namespace Sync
         }
 
         public static string KeyTag(string key) => $"key:{key.Replace('/', ':')}";
+
+        public static string ActivityTypeTag(string activityType)
+        {
+            return $"custom_type:{activityType.Kebaberize()}";
+        }
     }
 }

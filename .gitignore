@@ -4,3 +4,4 @@ obj
 *.db
 *.log
 *.csv
+summary.txt

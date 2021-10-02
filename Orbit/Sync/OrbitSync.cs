@@ -162,19 +162,6 @@ namespace Sync
             {
                 if (ex.Message.Contains("has already been taken"))
                 {
-                    switch (_config.KeyExistsMode)
-                    {
-                        case KeyExistsMode.Stop:
-                            _log.Information("Key {ActivityKey} already exists, assuming upload complete",
-                                activity.Key);
-                            break;
-
-                        case KeyExistsMode.Skip:
-                        default:
-                            _log.Debug("Skipping already uploaded activity");
-                            break;
-                    }
-
                     return SyncStatus.Exists;
                 }
 
@@ -232,7 +219,7 @@ namespace Sync
                 // if we leave these tags off of the PUT, then the api will delete the tags
                 activity.Tags.AddRange(new[]
                 {
-                    $"custom_type:{activity.Type.Kebaberize()}",
+                    OrbitUtil.ActivityTypeTag(activity.Type),
                     $"custom_title:{activity.Title.Kebaberize()}"
                 });
 

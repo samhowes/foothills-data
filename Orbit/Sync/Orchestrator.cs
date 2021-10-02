@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -38,6 +39,7 @@ namespace Sync
     public interface IMultiSync<TTopLevel, TSource> : ISync<TSource>
     {
         Task<ApiCursor<TTopLevel>> InitializeTopLevelAsync(SyncContext context);
+        bool StopOnExists => false;
     }
 
     public class Orchestrator
@@ -69,14 +71,12 @@ namespace Sync
             _log.Information("Starting sync...");
             try
             {
-                // await PeopleToMembers();
+                await PeopleToMembers();
                 await CheckInsToActivities();
                 await DonationsToActivities();
-
                 await GroupAttendanceToActivities();
                 await GroupMembershipToActivities();
-
-                // await NotesToActivities();
+                await NotesToActivities();
             }
             catch (Exception e)
             {
@@ -90,6 +90,31 @@ namespace Sync
             await using var csv = new CsvWriter(writer,new CsvConfiguration(CultureInfo.InvariantCulture));
             await csv.WriteRecordsAsync(_syncs);
 
+            await using var text = new StreamWriter(File.Create(Path.Combine(_filesConfig.Root, "summary.txt")));
+
+            var maxLength = _syncs.Select(s => s.Source.Length).Max();
+
+            var format = $"{{0,-{maxLength+2}}}";
+            var builder = new StringBuilder();
+            foreach (var sync in _syncs)
+            {
+                builder
+                    .AppendFormat(format, sync.Source + ":")
+                    .Append("Pushed: ")
+                    .Append(sync.Success);
+                
+                if (sync.Failed > 0)
+                    builder.Append("; Failed: ")
+                        .Append(sync.Failed);
+                
+                builder.Append(" in ")
+                    .AppendFormat("{0:0.00} seconds", sync.TotalSeconds);
+                builder.AppendLine();
+                
+            }
+
+            _log.Information("Summary: \n{Summary}", builder);
+            await text.WriteLineAsync(builder);
             return returnCode;
         }
         
@@ -114,7 +139,7 @@ namespace Sync
         public async Task CheckInsToActivities()
         {
             var impl = _services.GetRequiredService<CheckInsToActivitiesSync>();
-            await MultiSync(impl);
+            await Sync(impl);
         }
         
         public async Task GroupAttendanceToActivities()
@@ -138,6 +163,7 @@ namespace Sync
                 typeof(TTopLevel).Name, typeof(TSource).Name, impl.To);
 
             var context = await InitializeSync(impl);
+            if (context == null) return;
 
             var children = context.OverallProgress.Children.ToDictionary(c => c.Type);
 
@@ -148,7 +174,8 @@ namespace Sync
             using (context.OverallProgress)
             {
                 context.OverallProgress.Timer.Start();
-                for (;;)
+                bool done = false;
+                for (;!done;)
                 {
                     foreach (var topLevel in topCursor!.Data!)
                     {
@@ -177,23 +204,34 @@ namespace Sync
                         var thisCount = cursor.Meta.TotalCount();
                         _log.Information("{CursorName} has {ThisCount} records", cursor.Name, thisCount);
 
+                        bool didProcessAll = true;
                         if (cursor.Data!.Any())
                         {
-                            await ProcessCursorAsync(impl, cursor, childContext, context.OverallProgress);
+                            didProcessAll = await ProcessCursorAsync(impl, cursor, childContext, context.OverallProgress);
                         }
                         
                         childContext.OverallProgress.Complete = true;
                         await _logDb.SaveChangesAsync();
+                        if (!didProcessAll && impl.StopOnExists)
+                        {
+                            done = true;
+                            break;
+                        }
                     }
 
+                    context.OverallProgress.NextUrl = topCursor.NextUrl;
+                    await _logDb.SaveChangesAsync();
+                    if (done) break;
                     if (!await topCursor.FetchNextAsync()) break;
                 }    
             }
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
             record.Record(context.OverallProgress);
+            context.OverallProgress.Complete = true;
+            await _logDb.SaveChangesAsync();
         }
 
-        private async Task<SyncContext> InitializeSync(ISync impl)
+        private async Task<SyncContext?> InitializeSync(ISync impl)
         {
             var name = impl.GetType().Name;
             var progress = await _logDb.Progress
@@ -202,6 +240,11 @@ namespace Sync
 
             if (progress != null)
             {
+                if (progress.Complete)
+                {
+                    _log.Information("Sync previously completed successfully, skipping");
+                    return null;
+                }
                 _log.Information("Resuming sync at url {Url}", progress.NextUrl);
             }
             else
@@ -227,6 +270,8 @@ namespace Sync
             _syncs.Add(record);
             _log.Information("Starting sync from {SyncFrom} to {SyncTo}", typeof(TSource).Name, impl.To);
             var context = await InitializeSync(impl);
+            if (context == null) return;
+            
             var cursor = await impl.InitializeAsync(context);
             
             await RecordStart(context, cursor!);
@@ -234,10 +279,12 @@ namespace Sync
             using (context.OverallProgress)
             {
                 context.OverallProgress.Timer.Start();
-                await ProcessCursorAsync(impl, cursor, context, context.OverallProgress);
+                await ProcessCursorAsync(impl, cursor!, context, context.OverallProgress);
             }
             _log.Information("Sync complete in {TotalTime}", context.OverallProgress.Timer.Elapsed);
             record.Record(context.OverallProgress);
+            context.OverallProgress.Complete = true;
+            await _logDb.SaveChangesAsync();
         }
 
         private async Task RecordStart<TSource>(SyncContext context, ApiCursor<TSource> cursor) where TSource : EntityBase
@@ -262,10 +309,11 @@ namespace Sync
             FindBatch,
             EnsureCompleteness
         }
-        private async Task ProcessCursorAsync<TSource>(ISync<TSource> impl, ApiCursor<TSource> cursor, 
+        private async Task<bool> ProcessCursorAsync<TSource>(ISync<TSource> impl, ApiCursor<TSource> cursor, 
             SyncContext context, Progress progress)
             where TSource : EntityBase
         {
+            var didProcessAll = true;
             var state = _config.Mode == SyncMode.Seek ? CursorState.FindBatch : CursorState.ProcessAll;
             for (;;)
             {
@@ -273,9 +321,10 @@ namespace Sync
                 context.BatchProgress = batchStats;
                 batchStats.Timer.Start();
 
-                for (var i = 0; i < cursor.Data!.Count; i++)
+                var data = cursor.Data!.ToList();
+                for (var i = 0; i < data.Count; i++)
                 {
-                    var item = cursor.Data![i];
+                    var item = data![i];
                     if (state != CursorState.ProcessAll)
                     {
                         var existing = await _orbitSync.GetActivity(item);
@@ -283,7 +332,7 @@ namespace Sync
                         {
                             if (state == CursorState.FindBatch)
                             {
-                                batchStats.Skipped += cursor.Data.Count - i;
+                                batchStats.Skipped += data.Count - i;
                                 break;    
                             }
 
@@ -313,6 +362,7 @@ namespace Sync
                     if (result == SyncStatus.Exists && _config.KeyExistsMode == KeyExistsMode.Stop)
                     {
                         batchStats.Complete = true;
+                        didProcessAll = false;
                         break;
                     }
                 }
@@ -328,7 +378,7 @@ namespace Sync
                     {
                         state = CursorState.EnsureCompleteness;
                         // make sure the entire last batch was uploaded
-                        batchStats.Skipped -= cursor.Data.Count;
+                        batchStats.Skipped -= data.Count;
                     }
                     else break;
                 }
@@ -336,6 +386,8 @@ namespace Sync
                 context.OverallProgress.NextUrl = cursor.NextUrl;
                 await _logDb.SaveChangesAsync();
             }
+
+            return didProcessAll;
         }
 
         private void Report<TSource>(Progress batchStats, Progress progress, Meta meta)

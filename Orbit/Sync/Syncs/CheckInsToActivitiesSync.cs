@@ -41,14 +41,14 @@ namespace Sync
         public bool Locations { get; set; }
     }
 
-    public class CheckInsToActivitiesSync : IMultiSync<Event, CheckIn>
+    public class CheckInsToActivitiesSync : ISync<CheckIn>
     {
         private readonly SyncDeps _deps;
         private readonly CheckInsClient _checkInsClient;
         private readonly CheckInsConfig _config;
-        private SyncContext? _childContext;
         private readonly Regex _eventChannelRegex;
-        
+        private SyncContext _context = null!;
+
 
         public CheckInsToActivitiesSync(
             SyncDeps deps,
@@ -61,38 +61,14 @@ namespace Sync
             _eventChannelRegex = new Regex(config.ChannelRegex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
-        public Task<ApiCursor<Event>> InitializeTopLevelAsync(SyncContext context)
-        {
-            var url = context.NextUrl ?? UrlUtil.MakeUrl("events");
-            var cursor = new ApiCursor<Event>(_checkInsClient, url, "Events");
-            return Task.FromResult(cursor);
-            // return cursor;
-        }
-
         public async Task<ApiCursor<CheckIn>?> InitializeAsync(SyncContext context)
         {
-            _childContext = context;
-            var @event = context.GetData<Event>();
-            
-            var match = _eventChannelRegex.Match(@event.Name);
-            if (!match.Success)
-            {
-                _deps.Log.Debug("Skipping event without channel annotation: {EventName}", @event.Name);
-                return null;
-            }
-
-            @event.Name = @event.Name.Substring(0, match.Index).Trim();
-            
-            var channel = match.Groups["channel"].Value;
-
-            var details = await _checkInsClient.GetAsync<Event>(@event.Links.Self());
-            
-            var url = context.NextUrl ?? UrlUtil.MakeUrl(details.Data.Links!["check_ins"].Href,
-                ("include", "locations,event_times"),
+            _context = context;
+            var url = context.NextUrl ?? UrlUtil.MakeUrl("check_ins",
+                ("include", "locations,event_times,event"),
                 ("order", "-created_at"));
-
-            context.SetData(new EventInfo(@event, channel));
-            return new ApiCursor<CheckIn>(_checkInsClient, url, $"{@event.Name}:{channel}");
+            
+            return new ApiCursor<CheckIn>(_checkInsClient, url, "checkins");
         }
 
         public async Task<SyncStatus> ProcessItemAsync(CheckIn checkIn)
@@ -107,8 +83,23 @@ namespace Sync
                 _deps.Log.Error("double event times!");
             if (checkIn.Locations.Data.Count > 1)
                 _deps.Log.Error("double locations!");
-
-            var info = _childContext!.GetData<EventInfo>();
+            
+            var @event = checkIn.Event.Data;
+            
+            var info = await _deps.Cache.GetOrAddEntity(@event.Id!, (_) =>
+            {
+                var match = _eventChannelRegex.Match(@event.Name!);
+                @event.Name = @event.Name![..match.Index].Trim();
+                var channel = match.Groups["channel"].Value;
+                return Task.FromResult(new EventInfo(@event, channel))!;
+            });
+            
+            if (info?.Channel == null)
+            {
+                _deps.Log.Debug("Skipping event without channel annotation: {EventName}", @event.Name);
+                return SyncStatus.Ignored;
+            }
+            
             async Task<SyncStatus> CreateActivity(string? checkInName, string type, string? title = null)
             {
                 if (title == null)
@@ -149,7 +140,8 @@ namespace Sync
                         activityType = $"In Person {activityType}";
                     }
                     status = await CreateActivity(eventTime.Name, activityType);
-                    _childContext.BatchProgress.RecordItem(status);
+                    if (status != SyncStatus.Success) return status;
+                    _context.BatchProgress.RecordItem(status);
                 }
                 else
                 {
@@ -162,23 +154,25 @@ namespace Sync
                         var prefix = dateRangeConfig.Locations ? location.Name : dateRangeConfig.ActivityType;
 
                         status = await CreateActivity(eventTime.Name!, $"{prefix} {activityType}");
-                        _childContext.BatchProgress.RecordItem(status);
+                        if (status != SyncStatus.Success) return status;
+                        _context.BatchProgress.RecordItem(status);
                     }
                 }
             }
 
-            _childContext.BatchProgress.Success--;
+            _context.BatchProgress.Success--;
             return SyncStatus.Success;
         }
     }
 
-    public class EventInfo
+    public class EventInfo : EntityBase
     {
         public Event Event { get; }
         public string Channel { get; }
 
         public EventInfo(Event @event, string channel)
         {
+            Id = @event.Id;
             Event = @event;
             Channel = channel;
         }

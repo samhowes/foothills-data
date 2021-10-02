@@ -1,11 +1,6 @@
 name: Orbit Sync
 on:
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: 'Mode to run the sync in'
-        required: true
-        default: 'test'
+  workflow_dispatch: {}
   schedule:
   - cron: '30 0 * * *' # run at 12:30 every day
 
@@ -20,7 +15,7 @@ jobs:
       run: dotnet build
     
     - name: Test Api Access
-      run: scripts/run.sh test
+      run: scripts/run.sh sync
       env:
         ORBIT_API_TOKEN: ${{ secrets.ORBIT_API_TOKEN }}
         PCO_APPLICATION_ID: ${{ secrets.PCO_APPLICATION_ID }}
@@ -40,5 +35,10 @@ jobs:
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         SLACK_COLOR: ${{ job.status }}
-        SLACK_MESSAGE: 'Orbit Sync Completed with: ${{ job.status }}'
+        SLACK_MESSAGE: |
+          Orbit Sync Completed with: ${{ job.status }}
+          
+          ```
+          ${{env.SYNC_SUMMARY}}
+          ```
         SLACK_ICON: https://assets-global.website-files.com/6090f2cbfb550680d4288567/60916d2d77cab34ad9d7666f_Logo.svg

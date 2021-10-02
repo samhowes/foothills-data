@@ -71,7 +71,7 @@ namespace Sync
 
         public async Task<GroupInfo> GetGroupInfo(string groupId)
         {
-            return await _cache.GetOrAddEntity(groupId, async (_) =>
+            var info = await _cache.GetOrAddEntity(groupId, async (_) =>
             {
                 var groupDocument = await _groupsClient.GetAsync<GroupInfo>($"groups/{groupId}");
                 var group = groupDocument.Data!;
@@ -91,6 +91,7 @@ namespace Sync
                 group.Channel ??= _groupConfig.DefaultChannel;
                 return group;
             });
+            return info!;
         }
     }
 }

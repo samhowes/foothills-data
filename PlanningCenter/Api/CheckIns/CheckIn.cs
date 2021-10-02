@@ -23,6 +23,7 @@ namespace PlanningCenter.Api.CheckIns
         public Person? Person { get; set; }
         IPerson? IHavePerson.Person => Person;
         
+        public Relationship<Event> Event { get; set; }
         public Relationship<List<EventTime>> EventTimes { get; set; }
         public Relationship<List<Location>> Locations { get; set; }
     }

@@ -22,6 +22,7 @@ namespace Sync
         private readonly GroupAttendanceConfig _attendanceConfig;
         private readonly GroupSync _groupSync;
         private SyncContext _context = null!;
+        public bool StopOnExists => true;
 
         public GroupAttendanceSync(SyncDeps deps, GroupsClient groupsClient, GroupAttendanceConfig attendanceConfig,
             GroupSync groupSync)

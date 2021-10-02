@@ -11,3 +11,13 @@ echo "===================================================="
 pushd Orbit/Sync
 
 dotnet run --no-build -- "$1"
+
+popd
+
+summary="$(cat summary.txt)"
+
+# https://docs.github.com/en/actions/learn-github-actions/workflow-commands-for-github-actions
+echo "SYNC_SUMMARY<<EOF" >> $GITHUB_ENV
+echo "$summary" >> $GITHUB_ENV
+echo "EOF" >> $GITHUB_ENV
+

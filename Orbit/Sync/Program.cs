@@ -72,6 +72,8 @@ namespace Sync
             // should not throw
             var org = await peopleClient.GetAsync<Organization>("");
             var workspace = await orbitClient.GetAsync<Workspace>("sam-workspace");
+            var config = provider.GetRequiredService<FilesConfig>();
+            await File.WriteAllTextAsync(Path.Combine(config.Root, "summary.txt"), "success");
             return 0;
         }
 

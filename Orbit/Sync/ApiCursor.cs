@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
@@ -17,12 +19,14 @@ namespace Sync
     {
 
         private readonly ApiClientBase _client;
+        private readonly Func<T, bool> _shouldContinue;
         private DocumentRoot<List<T>>? _batch;
 
-        public ApiCursor(ApiClientBase client, string nextUrl, string? name= null)
+        public ApiCursor(ApiClientBase client, string nextUrl, string? name= null, Func<T, bool>? shouldContinue = null)
         {
             NextUrl = nextUrl;
             _client = client;
+            _shouldContinue = shouldContinue ?? ((_) => true);
             Name = name ?? typeof(T).Name;
         }
 
@@ -34,7 +38,7 @@ namespace Sync
             Meta = _batch.Meta;
         }
 
-        public List<T>? Data => _batch?.Data;
+        public IEnumerable<T>? Data => _batch?.Data.Where(_shouldContinue);
 
         public Task<bool> FetchNextAsync() => FetchAsync(_batch?.Links.Next());
 
