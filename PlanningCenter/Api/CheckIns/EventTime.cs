@@ -6,7 +6,7 @@ namespace PlanningCenter.Api.CheckIns
     public class EventTime : EntityBase
     {
         public string TotalCount { get; set; }
-        public string StartsAt { get; set; }
+        public DateTime StartsAt { get; set; }
         public DateTime ShowsAt { get; set; }
         public DateTime HidesAt { get; set; }
         public string RegularCount { get; set; }

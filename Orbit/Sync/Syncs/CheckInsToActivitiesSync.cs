@@ -100,7 +100,7 @@ namespace Sync
                 return SyncStatus.Ignored;
             }
             
-            async Task<SyncStatus> CreateActivity(string? checkInName, string type, string? title = null)
+            async Task<SyncStatus> CreateActivity(string? checkInName, string type, DateTime occurredAt, string? title = null)
             {
                 if (title == null)
                 {
@@ -113,7 +113,7 @@ namespace Sync
                     info!.Channel,
                     type,
                     OrbitUtil.ActivityKey(checkIn),
-                    OrbitUtil.FormatDate(checkIn.CreatedAt),
+                    OrbitUtil.FormatDate(occurredAt),
                     _config.Weight,
                     title,
                     PlanningCenterUtil.CheckInsLink(checkIn.EventPeriod.Id!, checkIn.Id!),
@@ -139,7 +139,7 @@ namespace Sync
                     {
                         activityType = $"In Person {activityType}";
                     }
-                    status = await CreateActivity(eventTime.Name, activityType);
+                    status = await CreateActivity(eventTime.Name, activityType, eventTime.StartsAt);
                     if (status != SyncStatus.Success) return status;
                     _context.BatchProgress.RecordItem(status);
                 }
@@ -153,7 +153,7 @@ namespace Sync
 
                         var prefix = dateRangeConfig.Locations ? location.Name : dateRangeConfig.ActivityType;
 
-                        status = await CreateActivity(eventTime.Name!, $"{prefix} {activityType}");
+                        status = await CreateActivity(eventTime.Name!, $"{prefix} {activityType}", eventTime.StartsAt);
                         if (status != SyncStatus.Success) return status;
                         _context.BatchProgress.RecordItem(status);
                     }
