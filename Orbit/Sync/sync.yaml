@@ -28,6 +28,8 @@ sync:
     - activityType: Worship Attendance
       channel: Worship
     weight: 5
+    weights:
+      426427: 1
     channelRegex: '(\(|\[)(ch)(annel)?:(?<channel>.*)(\)|\])'
     dateRanges:
     - activityType: In Person

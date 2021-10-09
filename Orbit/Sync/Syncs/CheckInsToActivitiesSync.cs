@@ -31,6 +31,7 @@ namespace Sync
         }
 
         public Dictionary<string,ActivityOverride> OverridesDict { get; set; }
+        public Dictionary<int, decimal> Weights { get; set; }
     }
 
     public class DateRangeConfig
@@ -108,13 +109,16 @@ namespace Sync
                     checkInName ??= info.Event.Name;
                     title += $" for {checkInName}";
                 }
+
+                if (!_config.Weights.TryGetValue(Int32.Parse(info.Event.Id!), out var weight))
+                    weight = _config.Weight;
                 
                 var activity = new UploadActivity(
                     info!.Channel,
                     type,
                     OrbitUtil.ActivityKey(checkIn),
                     OrbitUtil.FormatDate(occurredAt),
-                    _config.Weight,
+                    weight,
                     title,
                     PlanningCenterUtil.CheckInsLink(checkIn.EventPeriod.Id!, checkIn.Id!),
                     "CheckIn"
