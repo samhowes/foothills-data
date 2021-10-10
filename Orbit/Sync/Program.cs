@@ -28,14 +28,16 @@ namespace Sync
         
         [Option('i', "initial")]
         public bool Initial { get; set; }
+        
+        [Option('f', "force")]
+        public bool Force { get; set; }
+        
     }
 
     public static class Program
     {
         static async Task<int> Main(string[] args)
         {
-            var provider = await ConfigureServices();
-
             var parser = new Parser(with => with.HelpWriter = null);
 
             var result = parser.ParseArguments<SyncCommand>(args);
@@ -47,6 +49,8 @@ namespace Sync
             }
 
             var command = result.Value;
+            
+            var provider = await ConfigureServices(command);
 
             switch (command.Action)
             {
@@ -58,6 +62,10 @@ namespace Sync
                     
                     var sync = provider.GetRequiredService<Orchestrator>();
                     return await sync.All();
+                case "clean":
+                    var cleaner = provider.GetRequiredService<Cleaner>();
+                    return await cleaner.Clean(args.Skip(1).ToArray());
+                    
                 default:
                     Console.WriteLine($"Unknown action '{command.Action}'");
                     return -1;
@@ -77,7 +85,7 @@ namespace Sync
             return 0;
         }
 
-        private static async Task<IServiceProvider> ConfigureServices()
+        private static async Task<IServiceProvider> ConfigureServices(SyncCommand syncCommand)
         {
             var services = new ServiceCollection();
             services
@@ -117,7 +125,17 @@ namespace Sync
                 .AddTransient<DonationsToActivitiesSync>()
                 .AddTransient<GroupAttendanceSync>()
                 .AddTransient<GroupMembershipSync>()
-                .AddTransient<NotesToActivitiesSync>();
+                .AddTransient<NotesToActivitiesSync>()
+                .AddSingleton<Cleaner>();
+            services
+                .Configure<SyncImplConfig>(c =>
+                {
+                    if (syncCommand.Force)
+                    {
+                        c.Force = true;
+                        c.KeyExistsMode = KeyExistsMode.Skip;
+                    }
+                });
 
             var provider = services.BuildServiceProvider();
             return provider;
@@ -135,8 +153,7 @@ namespace Sync
 
             var baseSection = configuration.GetSection("sync");
 
-            var syncConfig = baseSection.Get<SyncImplConfig>();
-            services.AddSingleton(syncConfig);
+            services.Configure<SyncImplConfig>(baseSection);
 
             foreach (var type in types)
             {

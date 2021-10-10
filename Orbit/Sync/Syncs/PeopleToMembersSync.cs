@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApi;
+using Microsoft.Extensions.Options;
 using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
@@ -33,14 +34,14 @@ namespace Sync
         private readonly SyncImplConfig _syncConfig;
 
         public PeopleToMembersSync(PeopleClient peopleClient, OrbitApiClient orbitClient, OrbitSync orbitSync, 
-            PeopleConfig config, DataCache cache, SyncImplConfig syncConfig)
+            PeopleConfig config, DataCache cache, IOptions<SyncImplConfig> syncConfig)
         {
             _peopleClient = peopleClient;
             _orbitClient = orbitClient;
             _orbitSync = orbitSync;
             _config = config;
             _cache = cache;
-            _syncConfig = syncConfig;
+            _syncConfig = syncConfig.Value;
         }
 
         public string To => "Members";

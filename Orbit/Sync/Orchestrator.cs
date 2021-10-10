@@ -11,6 +11,7 @@ using JsonApi;
 using JsonApiSerializer.JsonApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PlanningCenter.Api.CheckIns;
 using Serilog;
     
@@ -53,13 +54,13 @@ namespace Sync
         private FilesConfig _filesConfig;
 
 
-        public Orchestrator(ILogger log, IServiceProvider services, LogDbContext logDb, SyncImplConfig config, 
+        public Orchestrator(ILogger log, IServiceProvider services, LogDbContext logDb, IOptions<SyncImplConfig> config, 
             SyncDeps deps, FilesConfig filesConfig)
         {
             _log = log;
             _services = services;
             _logDb = logDb;
-            _config = config;
+            _config = config.Value;
             _filesConfig = filesConfig;
             _orbitSync = deps.OrbitSync;
             _syncs = new List<SyncStats>();
@@ -242,8 +243,16 @@ namespace Sync
             {
                 if (progress.Complete)
                 {
-                    _log.Information("Sync previously completed successfully, skipping");
-                    return null;
+                    if (_config.Force)
+                    {
+                        _log.Information("Sync previously completed, but 'force' was specified, continuing");
+                        progress.Complete = false;
+                    }
+                    else
+                    {
+                        _log.Information("Sync previously completed successfully, skipping");
+                        return null;
+                    }
                 }
                 _log.Information("Resuming sync at url {Url}", progress.NextUrl);
             }

@@ -53,5 +53,10 @@ namespace Sync
         {
             return $"custom_type:{activityType.Kebaberize()}";
         }
+
+        public static string SourceTag<TActivitySource>() where TActivitySource : EntityBase
+        {
+            return $"source:{typeof(TActivitySource).Name}".ToLower();
+        }
     }
 }

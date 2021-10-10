@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 using Humanizer;
 using JsonApi;
 using JsonApiSerializer.JsonApi;
+using Microsoft.Extensions.Options;
 using Orbit.Api;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
-using PlanningCenter.Api.CheckIns;
 using Serilog;
 using Person = PlanningCenter.Api.People.Person;
 
@@ -38,6 +38,7 @@ namespace Sync
         public KeyExistsMode KeyExistsMode { get; set; } = KeyExistsMode.Stop;
         public string DefaultWorkspace { get; set; }
         public string ChildWorkspace { get; set; }
+        public bool Force { get; set; }
     }
 
     public class SyncDeps
@@ -50,10 +51,10 @@ namespace Sync
         public PeopleClient PeopleClient { get; set; }
         public OrbitSync OrbitSync { get; }
 
-        public SyncDeps(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
+        public SyncDeps(IOptions<SyncImplConfig> config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
             LogDbContext logDb, PeopleClient peopleClient, OrbitSync orbitSync)
         {
-            Config = config;
+            Config = config.Value;
             OrbitClient = orbitClient;
             Cache = cache;
             Log = log;
@@ -74,10 +75,10 @@ namespace Sync
         private readonly Dictionary<string, Loader<Member>> _loaders;
 
 
-        public OrbitSync(SyncImplConfig config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
+        public OrbitSync(IOptions<SyncImplConfig> config, OrbitApiClient orbitClient, DataCache cache, ILogger log,
             LogDbContext logDb, PeopleClient peopleClient)
         {
-            _config = config;
+            _config = config.Value;
             _orbitClient = orbitClient;
             _cache = cache;
             _log = log;
@@ -118,6 +119,7 @@ namespace Sync
         public async Task<SyncStatus> UploadActivity<TSource, TActivitySource>(TActivitySource source, UploadActivity activity, string personId)
             where TActivitySource : EntityBase
         {
+            activity.Tags.Add(OrbitUtil.SourceTag<TActivitySource>());
             if (string.IsNullOrEmpty(activity.ActivityType))
             {
                 throw new ArgumentException("No activity type specified", nameof(activity));

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using JsonApi;
-using JsonApiSerializer.JsonApi;
+using Microsoft.Extensions.Options;
 using Orbit.Api.Model;
 using PlanningCenter.Api;
 using PlanningCenter.Api.People;
@@ -48,13 +48,13 @@ namespace Sync
         private SyncImplConfig _syncConfig;
 
         public NotesToActivitiesSync(SyncDeps deps, PeopleClient peopleClient, NotesConfig config, OrbitSync orbitSync, 
-            SyncImplConfig syncConfig)
+            IOptions<SyncImplConfig> syncConfig)
         {
             _deps = deps;
             _peopleClient = peopleClient;
             _config = config;
             _orbitSync = orbitSync;
-            _syncConfig = syncConfig;
+            _syncConfig = syncConfig.Value;
         }
 
         public Task<ApiCursor<Note>?> InitializeAsync(SyncContext context)
